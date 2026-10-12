@@ -31,7 +31,7 @@ export interface MasterSheetRow {
 
 export async function generateMasterSheetExcel(
   rows: MasterSheetRow[],
-  role: "admin" | "salesperson"
+  role: "admin" | "salesperson" | "quality_reviewer" | "management" | string
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Oil & Gas Sales Hub";

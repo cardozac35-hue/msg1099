@@ -16,7 +16,7 @@ const productSchema = z.object({
   description: z.string().optional().default(""),
   listPrice: z.number().default(0),
   currency: z.string().default("USD"),
-  specifications: z.record(z.string()).optional().default({}),
+  specifications: z.record(z.string(), z.string()).optional().default({}),
 });
 
 export async function GET() {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const parsed = productSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.errors[0]?.message || "Validation failed" },
+        { success: false, error: parsed.error.issues[0]?.message || "Validation failed" },
         { status: 400 }
       );
     }

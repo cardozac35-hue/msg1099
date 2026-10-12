@@ -12,7 +12,7 @@ export async function GET(
       { heatNumber: params.id },
       user
     );
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ ...result });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

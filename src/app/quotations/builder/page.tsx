@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { DashboardShell } from "@/components/DashboardShell";
@@ -17,7 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-export default function QuotationBuilderPage() {
+function QuotationBuilderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const enquiryIdParam = searchParams.get("enquiryId");
@@ -613,5 +613,13 @@ export default function QuotationBuilderPage() {
         </form>
       </div>
     </DashboardShell>
+  );
+}
+
+export default function QuotationBuilderPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500 text-sm">Loading quotation builder...</div>}>
+      <QuotationBuilderContent />
+    </Suspense>
   );
 }

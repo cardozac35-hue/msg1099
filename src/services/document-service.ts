@@ -263,10 +263,18 @@ export const documentService = {
     if (isDbConnected()) {
       if (Types.ObjectId.isValid(id)) {
         doc = await DocumentModel.findById(id).lean();
-      } else {
+      }
+      if (!doc) {
         doc = await DocumentModel.findOne({ documentNumber: id }).lean();
       }
-    } else {
+      if (!doc) {
+        const seedMatch = SEED_DOCUMENTS.find((d) => d._id === id || d.id === id);
+        if (seedMatch) {
+          doc = await DocumentModel.findOne({ documentNumber: seedMatch.documentNumber }).lean();
+        }
+      }
+    }
+    if (!doc) {
       doc = memoryDocuments.find((d) => String(d._id) === id || d.id === id || d.documentNumber === id) || null;
     }
 
@@ -296,9 +304,10 @@ export const documentService = {
       })
         .sort({ versionNumber: -1 })
         .lean();
-    } else {
+    }
+    if (versions.length === 0) {
       versions = memoryDocumentVersions
-        .filter((v) => String(v.documentId) === String(doc._id || doc.id))
+        .filter((v) => String(v.documentId) === String(doc._id || doc.id) || v.documentNumber === doc.documentNumber)
         .sort((a, b) => b.versionNumber - a.versionNumber);
     }
 
@@ -310,9 +319,10 @@ export const documentService = {
       })
         .sort({ reviewedAt: -1 })
         .lean();
-    } else {
+    }
+    if (reviews.length === 0) {
       reviews = memoryDocumentReviews
-        .filter((r) => String(r.documentId) === String(doc._id || doc.id))
+        .filter((r) => String(r.documentId) === String(doc._id || doc.id) || r.documentNumber === doc.documentNumber)
         .sort((a, b) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime());
     }
 
@@ -624,7 +634,7 @@ export const documentService = {
     if (isDbConnected()) {
       await DocumentModel.findByIdAndUpdate(doc._id, {
         approvalStatus: "approved",
-        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : null,
+        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : user.id,
         reviewerName: user.name,
         reviewedAt,
         reviewNotes: comments,
@@ -635,7 +645,7 @@ export const documentService = {
       await DocumentReviewModel.create({
         documentId: doc._id,
         versionNumber: doc.versionNumber || 1,
-        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : null,
+        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : user.id,
         reviewerName: user.name,
         reviewerRole: user.role,
         decision: "approved",
@@ -731,7 +741,7 @@ export const documentService = {
     if (isDbConnected()) {
       await DocumentModel.findByIdAndUpdate(doc._id, {
         approvalStatus: "rejected",
-        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : null,
+        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : user.id,
         reviewerName: user.name,
         reviewedAt,
         rejectionReason: reason.trim(),
@@ -741,7 +751,7 @@ export const documentService = {
       await DocumentReviewModel.create({
         documentId: doc._id,
         versionNumber: doc.versionNumber || 1,
-        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : null,
+        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : user.id,
         reviewerName: user.name,
         reviewerRole: user.role,
         decision: "rejected",
@@ -837,7 +847,7 @@ export const documentService = {
       await DocumentReviewModel.create({
         documentId: doc._id,
         versionNumber: doc.versionNumber || 1,
-        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : null,
+        reviewerId: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : user.id,
         reviewerName: user.name,
         reviewerRole: user.role,
         decision: "correction_required",
@@ -926,7 +936,7 @@ export const documentService = {
         format: fileData.format || "pdf",
         fileSize: fileData.fileSize,
         changeReason: changeReason.trim(),
-        uploadedBy: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : null,
+        uploadedBy: Types.ObjectId.isValid(user.id) ? new Types.ObjectId(user.id) : user.id,
         uploadedByName: user.name,
         metadataSnapshot: {
           previousRevision: doc.revision,

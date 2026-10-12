@@ -11,7 +11,6 @@ import {
   FileCheck,
   Send,
   Clock,
-  CalendarAlert,
   Trophy,
   Percent,
   Plus,

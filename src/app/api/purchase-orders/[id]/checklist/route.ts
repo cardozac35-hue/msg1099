@@ -9,7 +9,7 @@ export async function GET(
   try {
     const user = await getCurrentUser();
     const result = await orderDocumentService.getOrderChecklist("PO", params.id, user);
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ ...result });
   } catch (err: any) {
     const status = err.message.includes("not found") ? 404 : 500;
     return NextResponse.json({ success: false, error: err.message }, { status });

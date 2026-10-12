@@ -15,7 +15,7 @@ export async function GET(
     headers.set("Content-Disposition", `attachment; filename="${result.filename}"`);
     headers.set("Content-Length", result.zipBuffer.length.toString());
 
-    return new NextResponse(result.zipBuffer, {
+    return new NextResponse(result.zipBuffer as any, {
       status: 200,
       headers,
     });

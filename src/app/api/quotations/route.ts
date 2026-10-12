@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const parsed = createQuotationSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.errors[0]?.message || "Validation failed" },
+        { success: false, error: parsed.error.issues[0]?.message || "Validation failed" },
         { status: 400 }
       );
     }

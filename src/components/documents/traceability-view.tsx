@@ -18,6 +18,7 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  FileText,
 } from "lucide-react";
 import { DocumentStatusBadge } from "./document-status-badge";
 

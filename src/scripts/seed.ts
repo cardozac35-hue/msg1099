@@ -15,6 +15,8 @@ import {
   PurchaseOrderModel,
   SalesOrderModel,
   DocumentModel,
+  DocumentVersionModel,
+  DocumentReviewModel,
   DocumentRequirementModel,
   OrderDocumentRequirementModel,
   EnquiryModel,
@@ -218,7 +220,7 @@ async function runSeed() {
       millName: b.millName,
       countryOfOrigin: b.countryOfOrigin,
       productionDate: b.productionDate,
-      inspectionStatus: b.inspectionStatus,
+      inspectionStatus: b.inspectionStatus as any,
       assignedCertificates: [],
       notes: b.notes,
     });
@@ -297,10 +299,13 @@ async function runSeed() {
     });
   }
 
-  // 10. Documents
+  // 10. Documents, Versions, and Reviews
   await DocumentModel.deleteMany({});
+  await DocumentVersionModel.deleteMany({});
+  await DocumentReviewModel.deleteMany({});
+
   for (const doc of SEED_DOCUMENTS) {
-    await DocumentModel.create({
+    const createdDoc = await DocumentModel.create({
       documentNumber: doc.documentNumber,
       title: doc.title,
       documentType: doc.documentType,
@@ -334,9 +339,64 @@ async function runSeed() {
       versionNumber: doc.versionNumber || 1,
       isArchived: false,
     });
+
+    // Create Initial Version 1
+    await DocumentVersionModel.create({
+      documentId: createdDoc._id,
+      versionNumber: 1,
+      revision: doc.revision || "0",
+      cloudinaryAssetId: doc.cloudinaryAssetId || "",
+      cloudinaryPublicId: doc.cloudinaryPublicId,
+      cloudinaryUrl: doc.cloudinaryUrl,
+      format: doc.format || "pdf",
+      fileSize: doc.fileSize,
+      changeReason: "Initial upload and registration",
+      uploadedBy: adminUser._id,
+      uploadedByName: doc.uploaderName || "Admin",
+      metadataSnapshot: {
+        title: doc.title,
+        documentType: doc.documentType,
+        materialCode: doc.materialCode,
+        heatNumber: doc.heatNumber,
+      },
+      createdAt: doc.createdAt || new Date(),
+    });
+
+    // Create Review Record if reviewed
+    if (doc.reviewerName || doc.approvalStatus === "approved" || doc.approvalStatus === "rejected") {
+      await DocumentReviewModel.create({
+        documentId: createdDoc._id,
+        versionNumber: 1,
+        reviewerId: qaUser._id,
+        reviewerName: doc.reviewerName || qaUser.name,
+        reviewerRole: "quality_reviewer",
+        decision: doc.approvalStatus === "rejected" ? "rejected" : "approved",
+        comments: doc.rejectionReason || "Compliance standard verified.",
+        checklistVerifications: [{ item: "Standard compliance verified", verified: true }],
+        reviewedAt: doc.reviewedAt || new Date(),
+      });
+    }
   }
 
-  // 11. Counters
+  // 11. Order Document Requirements
+  await OrderDocumentRequirementModel.deleteMany({});
+  for (const req of SEED_ORDER_REQUIREMENTS) {
+    await OrderDocumentRequirementModel.create({
+      orderType: req.orderType,
+      orderId: req.orderId,
+      orderNumber: req.orderNumber,
+      materialCode: req.materialCode || "",
+      documentType: req.documentType,
+      isMandatory: req.isMandatory !== false,
+      status: req.status,
+      linkedDocumentId: req.linkedDocumentId,
+      responsibleUserId: qaUser._id,
+      responsibleUserName: req.responsibleUserName || "Elena Rostova",
+      notes: req.notes || "",
+    });
+  }
+
+  // 12. Counters
   await CounterModel.deleteMany({});
   await CounterModel.create({ _id: `enquiry-${new Date().getFullYear()}`, seq: 1 });
   await CounterModel.create({ _id: `quotation-${new Date().getFullYear()}`, seq: 1 });

@@ -10,7 +10,7 @@ export interface IDocumentVersion extends Document {
   format: string;
   fileSize: number;
   changeReason: string;
-  uploadedBy: Types.ObjectId;
+  uploadedBy: any;
   uploadedByName: string;
   metadataSnapshot: Record<string, any>;
   createdAt: Date;
@@ -33,7 +33,7 @@ const DocumentVersionSchema = new Schema<IDocumentVersion>(
     fileSize: { type: Number, required: true },
     changeReason: { type: String, required: true },
     uploadedBy: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.Mixed,
       ref: "User",
       required: true,
     },

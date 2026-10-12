@@ -19,7 +19,7 @@ export async function POST(
       Boolean(allowSelfApprovalException)
     );
 
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ ...result });
   } catch (err: any) {
     const status =
       err.message.includes("FORBIDDEN") ||

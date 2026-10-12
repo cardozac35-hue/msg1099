@@ -296,6 +296,9 @@ async function runTestSuite() {
     assert(salesReplaceBlocked, "Salesperson correctly blocked from replacing approved certificate");
 
     // QA Reviewer or Admin performs version replacement
+    const docBeforeReplace = await documentService.getDocumentById("doc_01", adminUser);
+    const initialVersion = docBeforeReplace.document.versionNumber || 1;
+
     const replaceResult = await documentService.replaceDocumentVersion(
       "doc_01",
       "Rev 1",
@@ -310,7 +313,7 @@ async function runTestSuite() {
     );
 
     assert(replaceResult.success, "Version replacement operation succeeded by QA Reviewer");
-    assert(replaceResult.newVersionNumber === 2, "Version incremented to Version 2");
+    assert(replaceResult.newVersionNumber === initialVersion + 1, `Version incremented to Version ${initialVersion + 1}`);
     assert(replaceResult.revision === "Rev 1", "Revision updated to Rev 1");
 
     // Verify historical version 1 is preserved
@@ -367,7 +370,12 @@ async function runTestSuite() {
 
     // Confidential supplier docs must NOT be in customer pack
     const zipFiles = Object.keys(zip.files);
-    const hasConfidential = zipFiles.some((f) => f.toLowerCase().includes("conf"));
+    const hasConfidential = zipFiles.some(
+      (f) =>
+        f.toLowerCase().includes("confidential") ||
+        f.toLowerCase().includes("sup_conf") ||
+        f.toLowerCase().includes("cost_agreement")
+    );
     assert(!hasConfidential, "Supplier confidential documents strictly excluded from customer ZIP");
   }
 

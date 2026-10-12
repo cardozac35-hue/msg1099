@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }));
 
     const result = await dbService.checkDuplicateEnquiries(customerId, itemSpecs);
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ ...result });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED") {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });

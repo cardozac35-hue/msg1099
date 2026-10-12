@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const dateStr = new Date().toISOString().split("T")[0];
     const filename = `Oil_Gas_Sales_Hub_Master_${user.role}_${dateStr}.xlsx`;
 
-    return new Response(excelBuffer, {
+    return new Response(excelBuffer as any, {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

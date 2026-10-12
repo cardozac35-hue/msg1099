@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     let created: any = null;
 
     if (isDbConnected()) {
-      created = await DocumentRequirementModel.create(validation.data);
+      created = await DocumentRequirementModel.create(validation.data as any);
     } else {
       created = {
         _id: `req_${Date.now()}`,

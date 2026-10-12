@@ -2,16 +2,16 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export interface IOrderDocumentRequirement extends Document {
   orderType: "PO" | "SO";
-  orderId: Types.ObjectId;
+  orderId: any;
   orderNumber: string;
-  requirementId?: Types.ObjectId;
-  materialId?: Types.ObjectId;
+  requirementId?: any;
+  materialId?: any;
   materialCode?: string;
   documentType: string;
   isMandatory: boolean;
   status: "missing" | "uploaded" | "under_review" | "approved" | "rejected";
-  linkedDocumentId?: Types.ObjectId;
-  responsibleUserId?: Types.ObjectId;
+  linkedDocumentId?: any;
+  responsibleUserId?: any;
   responsibleUserName: string;
   notes?: string;
   createdAt: Date;
@@ -21,10 +21,10 @@ export interface IOrderDocumentRequirement extends Document {
 const OrderDocumentRequirementSchema = new Schema<IOrderDocumentRequirement>(
   {
     orderType: { type: String, enum: ["PO", "SO"], required: true, index: true },
-    orderId: { type: Schema.Types.ObjectId, required: true, index: true },
+    orderId: { type: Schema.Types.Mixed, required: true, index: true },
     orderNumber: { type: String, required: true, index: true },
-    requirementId: { type: Schema.Types.ObjectId, ref: "DocumentRequirement" },
-    materialId: { type: Schema.Types.ObjectId, ref: "Material" },
+    requirementId: { type: Schema.Types.Mixed, ref: "DocumentRequirement" },
+    materialId: { type: Schema.Types.Mixed, ref: "Material" },
     materialCode: { type: String, default: "" },
     documentType: { type: String, required: true, index: true },
     isMandatory: { type: Boolean, default: true },
@@ -34,8 +34,8 @@ const OrderDocumentRequirementSchema = new Schema<IOrderDocumentRequirement>(
       default: "missing",
       index: true,
     },
-    linkedDocumentId: { type: Schema.Types.ObjectId, ref: "Document" },
-    responsibleUserId: { type: Schema.Types.ObjectId, ref: "User" },
+    linkedDocumentId: { type: Schema.Types.Mixed, ref: "Document" },
+    responsibleUserId: { type: Schema.Types.Mixed, ref: "User" },
     responsibleUserName: { type: String, default: "" },
     notes: { type: String, default: "" },
   },

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
-export interface ISupplierQuote extends Document {
+export interface ISupplierQuote {
   enquiryId: Types.ObjectId;
   enquiryItemId: Types.ObjectId;
   supplierId: Types.ObjectId;

@@ -33,7 +33,7 @@ export default function DocumentDetailsPage() {
   const router = useRouter();
   const { success, error, info } = useToast();
 
-  const docId = params.id as string;
+  const docId = (params?.id as string) || "";
   const [data, setData] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"details" | "review" | "versions" | "audit">("details");

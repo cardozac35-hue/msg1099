@@ -8,7 +8,7 @@ export interface IChecklistItem {
 export interface IDocumentReview extends Document {
   documentId: Types.ObjectId;
   versionNumber: number;
-  reviewerId: Types.ObjectId;
+  reviewerId: any;
   reviewerName: string;
   reviewerRole: string;
   decision: "approved" | "rejected" | "correction_required";
@@ -35,7 +35,7 @@ const DocumentReviewSchema = new Schema<IDocumentReview>(
     },
     versionNumber: { type: Number, required: true },
     reviewerId: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.Mixed,
       ref: "User",
       required: true,
       index: true,

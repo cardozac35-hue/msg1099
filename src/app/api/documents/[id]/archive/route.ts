@@ -9,7 +9,7 @@ export async function POST(
   try {
     const user = await getCurrentUser();
     const result = await documentService.archiveDocument(params.id, user);
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ ...result });
   } catch (err: any) {
     const status = err.message.includes("FORBIDDEN") ? 403 : 500;
     return NextResponse.json({ success: false, error: err.message }, { status });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import { DataTable, Column } from "@/components/DataTable";
@@ -18,7 +18,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-export default function FollowUpsPage() {
+function FollowUpsContent() {
   const searchParams = useSearchParams();
   const filterEnq = searchParams.get("enquiryNumber");
 
@@ -447,5 +447,13 @@ export default function FollowUpsPage() {
         </Modal>
       </div>
     </DashboardShell>
+  );
+}
+
+export default function FollowUpsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500 text-sm">Loading follow-ups pipeline...</div>}>
+      <FollowUpsContent />
+    </Suspense>
   );
 }

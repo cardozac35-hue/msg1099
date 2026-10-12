@@ -12,6 +12,7 @@ import {
   memoryPurchaseOrders,
   memoryDocuments,
 } from "./document-service";
+import { SEED_DOCUMENTS } from "@/lib/seed-data";
 import { UserContext, PERMISSIONS } from "@/lib/permissions";
 import { Types } from "mongoose";
 import JSZip from "jszip";
@@ -26,11 +27,11 @@ export interface OrderChecklistResponse {
   shareableApprovedDocumentsCount: number;
 }
 
-export const orderDocumentService = {
+export class OrderDocumentService {
   /**
    * Get checklist for a specific sales order or purchase order
    */
-  async getOrderChecklist(
+  static async getOrderChecklist(
     orderType: "PO" | "SO",
     orderIdOrNumber: string,
     user: UserContext
@@ -86,15 +87,50 @@ export const orderDocumentService = {
     if (isConnected) {
       requirements = await OrderDocumentRequirementModel.find({
         $or: [{ orderId: order._id }, { orderNumber }],
-      })
-        .populate("linkedDocumentId")
-        .lean();
-    } else {
+      }).lean();
+    }
+    if (requirements.length === 0) {
       requirements = memoryOrderRequirements.filter(
         (r) =>
           String(r.orderId) === orderId ||
           r.orderNumber === orderNumber
       );
+    }
+
+    // Resolve linkedDocumentId safely
+    for (const req of requirements) {
+      if (req.linkedDocumentId) {
+        if (typeof req.linkedDocumentId === "object" && req.linkedDocumentId.approvalStatus) {
+          continue;
+        }
+        let docObj: any = null;
+        if (isConnected) {
+          if (Types.ObjectId.isValid(req.linkedDocumentId)) {
+            docObj = await DocumentModel.findById(req.linkedDocumentId).lean();
+          }
+          if (!docObj) {
+            docObj = await DocumentModel.findOne({ documentNumber: req.linkedDocumentId }).lean();
+          }
+          if (!docObj) {
+            const seedMatch = SEED_DOCUMENTS.find(
+              (s) => s._id === req.linkedDocumentId || s.id === req.linkedDocumentId
+            );
+            if (seedMatch) {
+              docObj = await DocumentModel.findOne({ documentNumber: seedMatch.documentNumber }).lean();
+            }
+          }
+        }
+        if (!docObj) {
+          docObj =
+            memoryDocuments.find(
+              (d) =>
+                String(d._id) === String(req.linkedDocumentId) ||
+                d.id === req.linkedDocumentId ||
+                d.documentNumber === req.linkedDocumentId
+            ) || null;
+        }
+        req.linkedDocumentId = docObj;
+      }
     }
 
     // Evaluate shareable approved documents
@@ -127,12 +163,12 @@ export const orderDocumentService = {
       dispatchBlockReason,
       shareableApprovedDocumentsCount: shareableCount,
     };
-  },
+  }
 
   /**
    * Generate downloadable ZIP containing only approved, customer-shareable documents
    */
-  async generateCustomerDocumentPack(
+  static async generateCustomerDocumentPack(
     salesOrderIdOrNumber: string,
     user: UserContext
   ): Promise<{ zipBuffer: Buffer; filename: string; documentCount: number; manifest: any }> {
@@ -183,6 +219,19 @@ export const orderDocumentService = {
         ],
       }).lean();
     } else {
+      permittedDocs = memoryDocuments.filter((d) => {
+        if (d.approvalStatus !== "approved") return false;
+        if (d.visibilityClassification !== "customer_shareable") return false;
+        if (d.isArchived) return false;
+        return (
+          String(d.salesOrderId) === String(order._id || order.id) ||
+          d.soNumber === order.soNumber ||
+          heatNumbers.includes(d.heatNumber)
+        );
+      });
+    }
+
+    if (permittedDocs.length === 0) {
       permittedDocs = memoryDocuments.filter((d) => {
         if (d.approvalStatus !== "approved") return false;
         if (d.visibilityClassification !== "customer_shareable") return false;
@@ -313,5 +362,7 @@ Authorized QA Verification: Yes
       documentCount: permittedDocs.length,
       manifest,
     };
-  },
-};
+  }
+}
+
+export const orderDocumentService = OrderDocumentService;

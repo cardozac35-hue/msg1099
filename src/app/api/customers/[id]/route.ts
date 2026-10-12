@@ -12,7 +12,7 @@ export async function GET(
     if (!result.customer) {
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
     }
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ ...result });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED") {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });

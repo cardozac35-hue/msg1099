@@ -44,7 +44,7 @@ export async function POST(
     const parsed = reviseQuotationSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: parsed.error.errors[0]?.message || "Validation failed" },
+        { success: false, error: parsed.error.issues[0]?.message || "Validation failed" },
         { status: 400 }
       );
     }

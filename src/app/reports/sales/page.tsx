@@ -9,7 +9,6 @@ import {
   Trophy,
   Clock,
   Send,
-  CalendarAlert,
   Users,
   Target,
   Percent,

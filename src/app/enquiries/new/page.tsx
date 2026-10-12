@@ -361,39 +361,128 @@ export default function NewEnquiryPage() {
     }
   };
 
-  // Screenshot / Image OCR Handler
+  // Screenshot / Image OCR Handler — runs entirely client-side via tesseract.js WASM
   const processImageOcr = async (file: File) => {
     setIsParsingExcel(true);
     setImportNotice({
-      text: `🖼️ Scanning screenshot "${file.name || "clipboard-image"}" with OCR...`,
+      text: `🖼️ Scanning screenshot "${file.name || "clipboard-image"}" with OCR... (loading engine)`,
       type: "success",
     });
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      const res = await fetch("/api/quotations/ocr-image", {
-        method: "POST",
-        body: formData,
+      // Dynamically import tesseract.js (runs in browser via WASM)
+      const Tesseract = await import("tesseract.js");
+      const worker = await Tesseract.createWorker("eng", undefined, {
+        logger: (m: any) => {
+          if (m.status === "recognizing text") {
+            setImportNotice({
+              text: `🖼️ OCR in progress... ${Math.round((m.progress || 0) * 100)}%`,
+              type: "success",
+            });
+          }
+        },
       });
-      const data = await res.json();
-      if (data.success && data.items && data.items.length > 0) {
-        const formattedItems = data.items.map((it: any) => ({
-          productId: "",
-          itemDescription: it.description,
-          category: it.category || "Pipes & Tubes",
-          materialGrade: it.materialGrade || "",
-          standard: it.standard || "",
-          size: it.size || "",
-          pressureClass: it.pressureClass || "",
-          connectionType: it.connectionType || "",
-          quantity: it.quantity || 1,
-          unitOfMeasure: it.unit || "MTR",
-          customerTargetUnitPrice: it.unitPrice || 0,
-          notes: it.remarks || "",
-        }));
 
+      // Read image as data URL
+      const imageUrl = URL.createObjectURL(file);
+      const result = await worker.recognize(imageUrl);
+      URL.revokeObjectURL(imageUrl);
+      const rawText = result.data.text || "";
+      await worker.terminate();
+
+      if (!rawText.trim()) {
+        setImportNotice({
+          text: "Could not read any text from the screenshot. Please ensure the image is clear and contains visible table text.",
+          type: "error",
+        });
+        setIsParsingExcel(false);
+        return;
+      }
+
+      // Common OCR corrections for oil & gas industrial terms
+      const cleanedText = rawText
+        .replace(/\b5\.(80|40|160|20|10|STD|XS|XXS)\b/gi, "S.$1")
+        .replace(/\bANS!\b/g, "ANSI")
+        .replace(/\bASTM\s+A1O6\b/gi, "ASTM A106")
+        .replace(/\bDR[I|l]\b/g, "DRL")
+        .replace(/\bM7R\b/gi, "MTR")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'");
+
+      // Try to detect tabular rows (tab or multi-space separated)
+      const lines = cleanedText.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+
+      // Keywords to identify product description lines
+      const oilGasKeywords = /pipe|valve|flange|fitting|astm|ansi|seamless|class|elbow|reducer|tee|coupling|gasket|stud|bolt|nut|\d+["']/i;
+      const headerKeywords = /^(s\.?no|sno|s no|description|item|qty|quantity|unit|total|remarks|sl|sr)/i;
+
+      const candidateLines = lines.filter((l: string) => {
+        if (headerKeywords.test(l)) return false;
+        return oilGasKeywords.test(l);
+      });
+
+      const formattedItems: any[] = [];
+      let counter = 1;
+
+      for (const line of candidateLines) {
+        // Try to parse out description, quantity, unit from the line
+        let desc = line
+          .replace(/^[^a-zA-Z0-9]+/, "")
+          .replace(/^[0-9]+[\s.:|_-]+/, "")
+          .trim();
+
+        if (desc.length < 5) continue;
+
+        // Extract inline qty + unit
+        let qty = 1;
+        let unit = "MTR";
+        const qtyUnitMatch = desc.match(/\b(\d+(?:\.\d+)?)\s*(MTR|EA|SET|KG|LOT|FT|PCS|NOS|SETS|PC|M)\b/i);
+        if (qtyUnitMatch) {
+          qty = parseFloat(qtyUnitMatch[1]) || 1;
+          unit = qtyUnitMatch[2].toUpperCase();
+          if (unit === "M") unit = "MTR";
+          if (unit === "PC") unit = "PCS";
+          if (unit === "SETS") unit = "SET";
+        }
+
+        // Also try tab-separated qty at end of line
+        const tabParts = line.split(/\t+/);
+        if (tabParts.length >= 3) {
+          const possibleQty = parseFloat(tabParts[tabParts.length - 3] || tabParts[tabParts.length - 2]);
+          if (!isNaN(possibleQty) && possibleQty > 0) qty = possibleQty;
+          const possibleUnit = (tabParts[tabParts.length - 2] || "").trim().toUpperCase();
+          if (/^(MTR|EA|SET|KG|LOT|FT|PCS|NOS)$/.test(possibleUnit)) unit = possibleUnit;
+          desc = tabParts.slice(0, -2).join(" ").replace(/^[0-9]+[\s.:|_-]+/, "").trim();
+        }
+
+        // Extract specs
+        const sizeMatch = desc.match(/(\d+(?:\/\d+)?(?:\.\d+)?)\s*(?:"|inch|in\b)/i);
+        const gradeMatch = desc.match(/\b(ASTM\s+[A-Z0-9]+(?:\s+GR\.[A-Z0-9]+)?|A106(?:\s+GR\.[A-Z0-9]+)?|A105|A333|A350|A312|A216\s+WCB)\b/i);
+
+        formattedItems.push({
+          productId: "",
+          itemDescription: desc,
+          category: desc.toLowerCase().includes("pipe")
+            ? "Pipes & Tubes"
+            : desc.toLowerCase().includes("valve")
+            ? "Valves"
+            : desc.toLowerCase().includes("flange")
+            ? "Flanges"
+            : "Pipes & Tubes",
+          materialGrade: gradeMatch ? gradeMatch[1].toUpperCase() : "",
+          standard: "",
+          size: sizeMatch ? `${sizeMatch[1]}"` : "",
+          pressureClass: "",
+          connectionType: "",
+          quantity: qty,
+          unitOfMeasure: unit,
+          customerTargetUnitPrice: 0,
+          notes: "",
+        });
+        counter++;
+      }
+
+      if (formattedItems.length > 0) {
         setItems(formattedItems);
         setImportNotice({
           text: `📸 Successfully extracted ${formattedItems.length} quotation items from your screenshot!`,
@@ -402,13 +491,12 @@ export default function NewEnquiryPage() {
         if (customerId) checkDuplicates(customerId, formattedItems);
       } else {
         setImportNotice({
-          text:
-            data.error ||
-            "Could not detect clear line items in screenshot. Please ensure the table text is visible or paste rows directly into the text area.",
+          text: "Could not detect clear line items in screenshot. Please ensure the table has product descriptions visible, or paste rows directly into the text area.",
           type: "error",
         });
       }
     } catch (err: any) {
+      console.error("Client-side OCR error:", err);
       setImportNotice({ text: err.message || "Screenshot OCR processing failed", type: "error" });
     } finally {
       setIsParsingExcel(false);

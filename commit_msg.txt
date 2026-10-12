@@ -1,0 +1,1 @@
+Fix OCR: run tesseract.js client-side in browser (WASM) instead of server-side sharp

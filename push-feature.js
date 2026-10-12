@@ -6,6 +6,6 @@ function run(cmd) {
 }
 
 run("git add .");
-run('git commit -m "fix: resolve prerender suspense boundaries, zod issues, and static routes for Vercel deployment"');
+run('git commit -m "feat: add Excel to Quote Converter with instant spreadsheet parsing and official MSG quotation PDF layout"');
 run("git push origin main");
 console.log("Pushed successfully to origin main!");

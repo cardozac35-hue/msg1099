@@ -245,6 +245,28 @@ function QuotationBuilderContent() {
           </div>
         )}
 
+        {/* Instant Excel Converter Promo Banner */}
+        <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-maroon-700 text-white flex items-center justify-center shrink-0">
+              <FileSpreadsheet className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">Have an Excel sheet or table with items?</p>
+              <p className="text-slate-600 text-[11px]">
+                Skip manual line item entry — paste or upload your Excel sheet to convert it into the official MSG Quote format in 1 click.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/excel-to-quote"
+            className="px-4 py-2 bg-maroon-700 hover:bg-maroon-800 text-white font-bold rounded-xl shadow-xs shrink-0 text-center transition flex items-center justify-center gap-1.5"
+          >
+            <span>⚡ Open Excel to Quote Converter</span>
+            <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
+          </Link>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section 1: Linked Enquiry & Client Profile */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
@@ -377,14 +399,23 @@ function QuotationBuilderContent() {
                 <Package className="w-4 h-4 text-maroon-600" />
                 <span>Commercial Line Items ({items.length})</span>
               </h3>
-              <button
-                type="button"
-                onClick={addItem}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Item</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/excel-to-quote"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-maroon-800 transition-colors"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Import from Excel</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Item</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4">

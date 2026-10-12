@@ -1,0 +1,234 @@
+import ExcelJS from "exceljs";
+
+export interface ParsedQuoteItem {
+  sNo: number;
+  description: string;
+  quantity: number;
+  unit: string;
+  remarks: string;
+  unitPrice: number;
+  totalPrice: number;
+  // Extracted specs if present
+  materialGrade?: string;
+  size?: string;
+  standard?: string;
+  pressureClass?: string;
+}
+
+/**
+ * Parses raw copied text from Excel or spreadsheet table (Tab-separated or Comma-separated)
+ */
+export function parsePastedExcelText(rawText: string): ParsedQuoteItem[] {
+  if (!rawText || !rawText.trim()) return [];
+
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  if (lines.length === 0) return [];
+
+  // Determine separator: Tab (Excel default) or Comma or Semicolon or Pipe
+  const firstLine = lines[0];
+  let delimiter = "\t";
+  if (!firstLine.includes("\t")) {
+    if (firstLine.includes(",")) delimiter = ",";
+    else if (firstLine.includes("|")) delimiter = "|";
+    else if (firstLine.includes(";")) delimiter = ";";
+  }
+
+  const rows = lines.map((line) => {
+    return line.split(delimiter).map((cell) => cell.trim().replace(/^["']|["']$/g, ""));
+  });
+
+  return parseTableRows(rows);
+}
+
+/**
+ * Parses an Excel file Buffer (.xlsx) using ExcelJS
+ */
+export async function parseExcelBuffer(buffer: Buffer): Promise<ParsedQuoteItem[]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer as any);
+
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return [];
+
+  const rows: string[][] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    const rowValues = row.values as any[];
+    // row.values is 1-indexed in ExcelJS
+    const cleanCells = (Array.isArray(rowValues) ? rowValues.slice(1) : []).map((val) => {
+      if (val === null || val === undefined) return "";
+      if (typeof val === "object" && val.text) return String(val.text).trim();
+      if (typeof val === "object" && val.result !== undefined) return String(val.result).trim();
+      return String(val).trim();
+    });
+    if (cleanCells.some((c) => c.length > 0)) {
+      rows.push(cleanCells);
+    }
+  });
+
+  return parseTableRows(rows);
+}
+
+/**
+ * Core table mapping logic that finds header row and extracts items
+ */
+function parseTableRows(rows: string[][]): ParsedQuoteItem[] {
+  if (rows.length === 0) return [];
+
+  let headerIndex = -1;
+  let colMap = {
+    sNo: -1,
+    desc: -1,
+    qty: -1,
+    unit: -1,
+    remarks: -1,
+    unitPrice: -1,
+    totalPrice: -1,
+  };
+
+  // 1. Identify header row
+  for (let r = 0; r < Math.min(rows.length, 5); r++) {
+    const row = rows[r].map((c) => c.toLowerCase());
+    const hasDesc = row.some((c) => c.includes("desc") || c.includes("material") || c.includes("item"));
+    const hasQty = row.some((c) => c.includes("qty") || c.includes("quantity") || c.includes("q'ty"));
+
+    if (hasDesc || hasQty) {
+      headerIndex = r;
+      row.forEach((col, idx) => {
+        if (col.includes("s no") || col.includes("s.no") || col.includes("sl") || col === "#" || col === "no") {
+          colMap.sNo = idx;
+        } else if (col.includes("desc") || col.includes("material") || col.includes("product") || col.includes("item")) {
+          colMap.desc = idx;
+        } else if (col.includes("qty") || col.includes("quantity") || col.includes("q'ty") || col.includes("pieces") || col.includes("pcs")) {
+          colMap.qty = idx;
+        } else if (col.includes("unit") || col.includes("uom")) {
+          colMap.unit = idx;
+        } else if (col.includes("remark") || col.includes("note")) {
+          colMap.remarks = idx;
+        } else if (col.includes("unit price") || col.includes("price") || col.includes("rate")) {
+          colMap.unitPrice = idx;
+        } else if (col.includes("total") || col.includes("amount")) {
+          colMap.totalPrice = idx;
+        }
+      });
+      break;
+    }
+  }
+
+  // Fallback default column layout if no explicit header matched
+  if (headerIndex === -1) {
+    headerIndex = 0;
+    // Guess: Col 0 = S No, Col 1 = Desc, Col 2 = Qty, Col 3 = Unit, Col 4 = Remarks
+    colMap = { sNo: 0, desc: 1, qty: 2, unit: 3, remarks: 4, unitPrice: 5, totalPrice: 6 };
+  } else {
+    // If description wasn't found, find the longest string column
+    if (colMap.desc === -1) colMap.desc = 1;
+    if (colMap.qty === -1) colMap.qty = 2;
+    if (colMap.unit === -1) colMap.unit = 3;
+    if (colMap.remarks === -1 && rows[headerIndex].length > 4) colMap.remarks = 4;
+  }
+
+  const items: ParsedQuoteItem[] = [];
+  const dataRows = rows.slice(headerIndex + 1);
+
+  let itemCounter = 1;
+  for (const row of dataRows) {
+    // Stop if row is a total row or empty
+    const rowText = row.join(" ").toLowerCase();
+    if (rowText.includes("total amount") || rowText.includes("grand total") || rowText.includes("subtotal")) {
+      continue;
+    }
+
+    const desc = colMap.desc !== -1 && row[colMap.desc] ? row[colMap.desc] : "";
+    if (!desc || desc.trim().length === 0) continue;
+
+    // Parse Quantity
+    let qty = 1;
+    if (colMap.qty !== -1 && row[colMap.qty]) {
+      const rawQty = row[colMap.qty].replace(/[^0-9.]/g, "");
+      qty = parseFloat(rawQty) || 1;
+    }
+
+    // Parse Unit
+    let unit = "MTR";
+    if (colMap.unit !== -1 && row[colMap.unit]) {
+      unit = row[colMap.unit].toUpperCase().trim() || "MTR";
+    }
+
+    // Parse Remarks
+    let remarks = "";
+    if (colMap.remarks !== -1 && row[colMap.remarks]) {
+      remarks = row[colMap.remarks].trim();
+    }
+
+    // Parse Unit Price
+    let unitPrice = 0;
+    if (colMap.unitPrice !== -1 && row[colMap.unitPrice]) {
+      const rawPrice = row[colMap.unitPrice].replace(/[^0-9.]/g, "");
+      unitPrice = parseFloat(rawPrice) || 0;
+    }
+
+    // Parse S No.
+    let sNo = itemCounter;
+    if (colMap.sNo !== -1 && row[colMap.sNo]) {
+      const rawSNo = parseInt(row[colMap.sNo].replace(/[^0-9]/g, ""), 10);
+      if (!isNaN(rawSNo)) sNo = rawSNo;
+    }
+
+    const totalPrice = unitPrice > 0 ? qty * unitPrice : 0;
+
+    // Extract common oil & gas specs from description if present
+    const specs = extractIndustrialSpecs(desc);
+
+    items.push({
+      sNo,
+      description: desc,
+      quantity: qty,
+      unit,
+      remarks,
+      unitPrice,
+      totalPrice,
+      ...specs,
+    });
+
+    itemCounter++;
+  }
+
+  return items;
+}
+
+/**
+ * Intelligent helper to extract grade, size, standard from piping description
+ */
+function extractIndustrialSpecs(desc: string) {
+  const specs: { materialGrade?: string; size?: string; standard?: string; pressureClass?: string } = {};
+
+  // Size pattern: 6", 8", 10", DN 150, 1/2"
+  const sizeMatch = desc.match(/(\d+(?:\/\d+)?(?:\.\d+)?)\s*(?:\"|inch|in\b|mm\b)/i);
+  if (sizeMatch) {
+    specs.size = `${sizeMatch[1]}"`;
+  }
+
+  // Material Grade: ASTM A106 GR.B, A105, A333 GR.6, A312 TP316L
+  const gradeMatch = desc.match(/\b(ASTM\s+[A-Z0-9]+(?:\s+GR\.[A-Z0-9]+)?|A106(?:\s+GR\.[A-Z0-9]+)?|A105|A333|A350|A312|A216\s+WCB)\b/i);
+  if (gradeMatch) {
+    specs.materialGrade = gradeMatch[1].toUpperCase();
+  }
+
+  // Standard: ANSI B36.10, API 6D, ASME B16.5
+  const stdMatch = desc.match(/\b(ANSI\s+B36\.10|ASME\s+B16\.[0-9]+|API\s+6[A-D]|API\s+5L)\b/i);
+  if (stdMatch) {
+    specs.standard = stdMatch[1].toUpperCase();
+  }
+
+  // Schedule / Class: S.80, SCH 40, CLASS 600, 150#
+  const schMatch = desc.match(/\b(S\.\d+|SCH\s*\d+|CLASS\s*\d+|150#|300#|600#)\b/i);
+  if (schMatch) {
+    specs.pressureClass = schMatch[1].toUpperCase();
+  }
+
+  return specs;
+}

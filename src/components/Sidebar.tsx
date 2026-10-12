@@ -88,6 +88,7 @@ export function Sidebar({
     {
       label: "Quotations & Pipeline",
       items: [
+        { label: "⚡ Excel to Quote", href: "/excel-to-quote", icon: FileSpreadsheet },
         { label: "Quotation Builder", href: "/quotations/builder", icon: FileText },
         { label: "All Quotations", href: "/quotations", icon: FileSpreadsheet },
         { label: "Follow-ups", href: "/follow-ups", icon: CalendarClock },

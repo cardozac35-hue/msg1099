@@ -36,6 +36,13 @@ export function Sidebar({ pendingCount = 2, missingCount = 1 }: SidebarProps) {
       badge: null,
     },
     {
+      name: "⚡ Excel to Quote",
+      href: "/excel-to-quote",
+      icon: Files,
+      badge: "NEW",
+      badgeColor: "bg-rose-700 text-white",
+    },
+    {
       name: "All Documents",
       href: "/dashboard/documents/all",
       icon: Files,

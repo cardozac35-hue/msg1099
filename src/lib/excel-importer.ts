@@ -9,10 +9,12 @@ export interface ParsedQuoteItem {
   unitPrice: number;
   totalPrice: number;
   // Extracted specs if present
+  category?: string;
   materialGrade?: string;
   size?: string;
   standard?: string;
   pressureClass?: string;
+  connectionType?: string;
 }
 
 /**
@@ -204,7 +206,63 @@ function parseTableRows(rows: string[][]): ParsedQuoteItem[] {
  * Intelligent helper to extract grade, size, standard from piping description
  */
 function extractIndustrialSpecs(desc: string) {
-  const specs: { materialGrade?: string; size?: string; standard?: string; pressureClass?: string } = {};
+  const specs: {
+    category?: string;
+    materialGrade?: string;
+    size?: string;
+    standard?: string;
+    pressureClass?: string;
+    connectionType?: string;
+  } = {};
+
+  const lower = desc.toLowerCase();
+
+  // Category detection
+  if (lower.includes("pipe") || lower.includes("tube") || lower.includes("tubing")) {
+    specs.category = "Pipes & Tubes";
+  } else if (
+    lower.includes("valve") ||
+    lower.includes("ball") ||
+    lower.includes("gate") ||
+    lower.includes("globe") ||
+    lower.includes("check") ||
+    lower.includes("butterfly")
+  ) {
+    specs.category = "Valves";
+  } else if (lower.includes("flange") || lower.includes("wnrf") || lower.includes("sorf") || lower.includes("blind")) {
+    specs.category = "Flanges";
+  } else if (
+    lower.includes("fitting") ||
+    lower.includes("elbow") ||
+    lower.includes("tee") ||
+    lower.includes("reducer") ||
+    lower.includes("coupling")
+  ) {
+    specs.category = "Fittings";
+  } else if (lower.includes("gasket") || lower.includes("seal") || lower.includes("spiral wound")) {
+    specs.category = "Gaskets & Seals";
+  } else if (lower.includes("gauge") || lower.includes("transmitter") || lower.includes("instrumentation")) {
+    specs.category = "Instrumentation & Gauges";
+  } else if (lower.includes("bolt") || lower.includes("stud") || lower.includes("nut") || lower.includes("fastener")) {
+    specs.category = "Fasteners & Studs";
+  } else if (lower.includes("drill") || lower.includes("casing") || lower.includes("wellhead")) {
+    specs.category = "Drilling & Wellhead";
+  } else {
+    specs.category = "Pipes & Tubes";
+  }
+
+  // Connection Type detection
+  if (lower.includes("butt weld") || lower.includes("bw") || lower.includes("drl") || lower.includes("beveled")) {
+    specs.connectionType = "Butt Weld";
+  } else if (lower.includes("rf") || lower.includes("raised face") || lower.includes("flanged")) {
+    specs.connectionType = "RF Flanged";
+  } else if (lower.includes("rtj") || lower.includes("ring type joint")) {
+    specs.connectionType = "RTJ";
+  } else if (lower.includes("threaded") || lower.includes("npt")) {
+    specs.connectionType = "Threaded / NPT";
+  } else if (lower.includes("socket weld") || lower.includes("sw")) {
+    specs.connectionType = "Socket Weld";
+  }
 
   // Size pattern: 6", 8", 10", DN 150, 1/2"
   const sizeMatch = desc.match(/(\d+(?:\/\d+)?(?:\.\d+)?)\s*(?:\"|inch|in\b|mm\b)/i);
@@ -212,20 +270,20 @@ function extractIndustrialSpecs(desc: string) {
     specs.size = `${sizeMatch[1]}"`;
   }
 
-  // Material Grade: ASTM A106 GR.B, A105, A333 GR.6, A312 TP316L
-  const gradeMatch = desc.match(/\b(ASTM\s+[A-Z0-9]+(?:\s+GR\.[A-Z0-9]+)?|A106(?:\s+GR\.[A-Z0-9]+)?|A105|A333|A350|A312|A216\s+WCB)\b/i);
+  // Material Grade: ASTM A106 GR.B, A105, A333 GR.6, A312 TP316L, etc.
+  const gradeMatch = desc.match(/\b(ASTM\s+[A-Z0-9]+(?:\s+GR\.[A-Z0-9]+)?|A106(?:\s+GR\.[A-Z0-9]+)?|A105|A333(?:\s+GR\.[0-9]+)?|A350(?:\s+LF[0-9]+)?|A312(?:\s+TP[0-9]+[A-Z]*)?|A216\s+WCB|SS316L?|SS304L?|INCONEL\s*\d+|DUPLEX\s*\d*)\b/i);
   if (gradeMatch) {
     specs.materialGrade = gradeMatch[1].toUpperCase();
   }
 
-  // Standard: ANSI B36.10, API 6D, ASME B16.5
-  const stdMatch = desc.match(/\b(ANSI\s+B36\.10|ASME\s+B16\.[0-9]+|API\s+6[A-D]|API\s+5L)\b/i);
+  // Standard: ANSI B36.10, API 6D, ASME B16.5, etc.
+  const stdMatch = desc.match(/\b(ANSI\s+B36\.10|ASME\s+B16\.[0-9]+|API\s+6[A-D]|API\s+5L|DIN\s+[0-9]+|BS\s+[0-9]+)\b/i);
   if (stdMatch) {
     specs.standard = stdMatch[1].toUpperCase();
   }
 
   // Schedule / Class: S.80, SCH 40, CLASS 600, 150#
-  const schMatch = desc.match(/\b(S\.\d+|SCH\s*\d+|CLASS\s*\d+|150#|300#|600#)\b/i);
+  const schMatch = desc.match(/\b(S\.\d+|SCH\s*\d+|CLASS\s*\d+|150#|300#|600#|900#|1500#|2500#)\b/i);
   if (schMatch) {
     specs.pressureClass = schMatch[1].toUpperCase();
   }

@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Percent,
+  Download,
 } from "lucide-react";
 
 export default function EnquiryDetailsPage() {
@@ -51,6 +52,64 @@ export default function EnquiryDetailsPage() {
 
   // Status updating state
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadMsgPdf = async () => {
+    if (!enquiry) return;
+    setDownloadingPdf(true);
+    try {
+      const dateStr = enquiry.createdAt
+        ? new Date(enquiry.createdAt).toLocaleDateString("en-GB").replace(/\//g, "-")
+        : new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
+
+      const seqNumber = enquiry.enquiryNumber?.replace(/[^0-9]/g, "").slice(-5) || "12466";
+      const qRef = `MSG-${new Date().getMonth() + 1}${new Date().getFullYear().toString().slice(-2)}-${seqNumber}-Q`;
+
+      const payload = {
+        companyName: "MSG Oilfield Equipment Trading LLC",
+        toCustomer: enquiry.customerName || "VALUED CLIENT",
+        address: "JEBEL ALI FREE ZONE, DUBAI, UAE",
+        clientRef: enquiry.enquiryNumber || "WHATSAPP ENQUIRY-PIPE",
+        quotationRef: qRef,
+        attention: enquiry.contactName || "PURCHASE / PROCUREMENT DEPT",
+        date: dateStr,
+        currency: enquiry.currency || "USD",
+        items: (enquiry.items || []).map((it: any, idx: number) => ({
+          sNo: idx + 1,
+          description: it.itemDescription,
+          quantity: it.quantity || 1,
+          unit: it.unitOfMeasure || "MTR",
+          unitPrice: it.customerTargetUnitPrice || 0,
+          totalPrice: (it.quantity || 1) * (it.customerTargetUnitPrice || 0),
+          remarks: it.notes || "",
+        })),
+        signatoryName: enquiry.assignedToName || "Mohammed Rizwan",
+        signatoryCompany: "MSG Oilfield Equipment",
+      };
+
+      const res = await fetch("/api/pdf/msg-quotation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to generate PDF");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Quotation_${qRef}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const fetchEnquiryDetails = async () => {
     try {
@@ -209,6 +268,16 @@ export default function EnquiryDetailsPage() {
               <option value="lost">Status: Lost</option>
               <option value="cancelled">Status: Cancelled</option>
             </select>
+
+            <button
+              type="button"
+              onClick={handleDownloadMsgPdf}
+              disabled={downloadingPdf}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-colors disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5 text-amber-400" />
+              <span>{downloadingPdf ? "Building PDF..." : "MSG Quote PDF"}</span>
+            </button>
 
             <Link
               href={`/quotations/builder?enquiryId=${enquiry._id || enquiry.id}`}

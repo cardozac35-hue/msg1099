@@ -24,6 +24,9 @@ import {
   ShieldCheck,
   Percent,
   Camera,
+  Bot,
+  Wand2,
+  Cpu,
 } from "lucide-react";
 import { DEFAULT_MSG_TERMS } from "@/lib/msg-terms";
 import { formatCurrency } from "@/lib/utils";
@@ -69,11 +72,22 @@ export default function NewEnquiryPage() {
     },
   ]);
 
-  // Excel Importer State
-  const [activeItemTab, setActiveItemTab] = useState<"excel" | "manual">("excel");
+  // Importer & AI Bot State
+  const [activeItemTab, setActiveItemTab] = useState<"ai-bot" | "excel" | "manual">("ai-bot");
   const [pasteText, setPasteText] = useState("");
   const [isParsingExcel, setIsParsingExcel] = useState(false);
   const [importNotice, setImportNotice] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  // AI Bot Specific State
+  const [aiInputText, setAiInputText] = useState("");
+  const [aiInstructions, setAiInstructions] = useState("");
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [aiResult, setAiResult] = useState<{
+    items: any[];
+    summary: string;
+    engineUsed: string;
+  } | null>(null);
+  const [aiImagePreview, setAiImagePreview] = useState<string | null>(null);
 
   // Quote Preview Modal State
   const [showQuotePreview, setShowQuotePreview] = useState(false);
@@ -579,6 +593,79 @@ export default function NewEnquiryPage() {
     }
   };
 
+  // Dedicated AI Bot execution function
+  const handleRunAiBot = async (textOverride?: string) => {
+    const textToProcess = (textOverride || aiInputText || pasteText).trim();
+    if (!textToProcess) {
+      setImportNotice({
+        text: "Please enter or paste OCR text, WhatsApp RFQ, or upload a screenshot for the AI Bot to convert.",
+        type: "error",
+      });
+      return;
+    }
+
+    setIsAiProcessing(true);
+    setImportNotice({
+      text: "🤖 MSG AI Bot is analyzing and structuring Oil & Gas line items...",
+      type: "success",
+    });
+
+    try {
+      const res = await fetch("/api/ai/ocr-convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: textToProcess,
+          instructions: aiInstructions,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.items && data.items.length > 0) {
+        const formattedItems = data.items.map((it: any) => ({
+          productId: "",
+          itemDescription: it.description,
+          category: it.category || "Pipes & Tubes",
+          materialGrade: it.materialGrade || "",
+          standard: it.standard || "",
+          size: it.size || "",
+          pressureClass: it.pressureClass || "",
+          connectionType: it.connectionType || "",
+          quantity: it.quantity || 1,
+          unitOfMeasure: it.unit || "MTR",
+          customerTargetUnitPrice: it.unitPrice || 0,
+          notes: it.remarks || "",
+        }));
+
+        setItems(formattedItems);
+        setAiResult({
+          items: formattedItems,
+          summary: data.summary,
+          engineUsed: data.engineUsed,
+        });
+
+        setImportNotice({
+          text: `🤖 AI Bot successfully converted ${formattedItems.length} quotation items (${data.engineUsed})!`,
+          type: "success",
+        });
+
+        if (customerId) checkDuplicates(customerId, formattedItems);
+      } else {
+        setImportNotice({
+          text: data.error || "AI Bot could not detect structured line items in this text.",
+          type: "error",
+        });
+      }
+    } catch (err: any) {
+      setImportNotice({
+        text: err.message || "AI Bot conversion failed",
+        type: "error",
+      });
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
   // Clipboard Paste Event Handler (Ctrl+V)
   const handleClipboardPaste = (e: React.ClipboardEvent) => {
     const clipItems = e.clipboardData?.items;
@@ -1024,6 +1111,21 @@ export default function NewEnquiryPage() {
             <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
               <button
                 type="button"
+                onClick={() => setActiveItemTab("ai-bot")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  activeItemTab === "ai-bot"
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Bot className="w-3.5 h-3.5" />
+                <span>🤖 AI Quote Bot</span>
+                <span className="text-[9px] bg-purple-500/50 text-purple-100 px-1.5 py-0.5 rounded font-mono">
+                  NEW
+                </span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveItemTab("excel")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   activeItemTab === "excel"
@@ -1048,6 +1150,150 @@ export default function NewEnquiryPage() {
               </button>
             </div>
           </div>
+
+          {/* AI Quote Bot Tab */}
+          {activeItemTab === "ai-bot" && (
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-50/70 via-indigo-50/40 to-slate-50 border border-purple-200/80 space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-100 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-slate-900">
+                        MSG AI Quotation Assistant
+                      </h4>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        OCR & Industrial NLP
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Paste screenshot images (<kbd className="px-1 bg-white border border-slate-200 rounded font-mono text-[9px]">Ctrl+V</kbd>), messy OCR scans, or WhatsApp inquiries to convert into structured quote items
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiInputText(SAMPLE_RFQ_PASTE_TEXT);
+                      handleRunAiBot(SAMPLE_RFQ_PASTE_TEXT);
+                    }}
+                    className="text-[11px] font-bold text-purple-700 bg-white hover:bg-purple-100/60 px-2.5 py-1.5 rounded-lg border border-purple-200 transition-colors shadow-2xs"
+                  >
+                    ⚡ Load Sample RFQ
+                  </button>
+                  {aiInputText && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAiInputText("");
+                        setAiResult(null);
+                      }}
+                      className="text-[11px] font-medium text-slate-500 hover:text-rose-600 px-2 py-1 rounded"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Paste & Prompt Input Area */}
+              <div onPaste={handleClipboardPaste} className="relative">
+                <textarea
+                  rows={4}
+                  value={aiInputText}
+                  onChange={(e) => setAiInputText(e.target.value)}
+                  onPaste={handleClipboardPaste}
+                  placeholder={`Paste screenshot (Ctrl+V) or paste messy RFQ text here:
+Example:
+1 | PIPE 6" S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL 240 MTR
+2 | PIPE 8" S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL 144 MTR
+3 | PIPE 10" S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL 120 MTR
+
+💡 Tip: Press Ctrl + V anywhere to paste a screenshot image directly! The AI Bot will scan and structure it.`}
+                  className="w-full text-xs font-mono p-3 rounded-xl border border-purple-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 shadow-inner"
+                />
+              </div>
+
+              {/* AI Instructions Bar */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={aiInstructions}
+                    onChange={(e) => setAiInstructions(e.target.value)}
+                    placeholder="Optional AI prompt: e.g., 'Normalize all pipe schedules to S.80', 'Assume European make'"
+                    className="w-full text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Action Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 cursor-pointer transition-colors shadow-2xs">
+                    <Camera className="w-3.5 h-3.5 text-purple-600" />
+                    <span>📸 Upload Screenshot / Image (OCR)</span>
+                    <input
+                      type="file"
+                      accept="image/*,.png,.jpg,.jpeg,.webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) processImageOcr(file);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  <span className="text-[11px] text-slate-500 hidden md:inline">
+                    Or press <kbd className="px-1 py-0.5 bg-slate-200 rounded font-mono text-[10px]">Ctrl+V</kbd> anywhere
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isAiProcessing || (!aiInputText.trim() && !pasteText.trim())}
+                  onClick={() => handleRunAiBot()}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold rounded-xl text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition-all"
+                >
+                  {isAiProcessing ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>AI Bot is Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-3.5 h-3.5" />
+                      <span>Convert with AI Bot</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* AI Result Card */}
+              {aiResult && (
+                <div className="p-3.5 rounded-xl bg-white border border-purple-200 shadow-2xs space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-bold text-slate-900">
+                        {aiResult.summary}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-700">
+                      {aiResult.engineUsed}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                    <span>✅ Populated {aiResult.items.length} items directly into the quotation table below.</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Excel / Paste Area */}
           {activeItemTab === "excel" && (

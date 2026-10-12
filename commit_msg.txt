@@ -1,1 +1,1 @@
-Fix screenshot OCR: server-side sharp high-resolution extraction with client canvas fallback
+Add MSG AI Quotation Bot to convert OCR, screenshots, and messy RFQs to structured quote items

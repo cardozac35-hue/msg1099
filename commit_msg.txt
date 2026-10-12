@@ -1,1 +1,1 @@
-Fix OCR: run tesseract.js client-side in browser (WASM) instead of server-side sharp
+Fix screenshot OCR: server-side sharp high-resolution extraction with client canvas fallback

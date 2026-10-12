@@ -7,11 +7,14 @@ import { ParsedQuoteItem, parsePastedExcelText } from "./excel-importer";
  */
 function cleanIndustrialOcrText(text: string): string {
   return text
-    .replace(/\b5\.(80|40|160|20|10|STD|XS|XXS)\b/gi, "S.$1")
-    .replace(/\bANS!\b/g, "ANSI")
+    .replace(/\b[5$]\.(80|40|160|20|10|STD|XS|XXS)\b/gi, "S.$1")
+    .replace(/\bANS[!|l1]\b/g, "ANSI")
     .replace(/\bASTM\s+A1O6\b/gi, "ASTM A106")
+    .replace(/\bGR\.8\b/gi, "GR.B")
+    .replace(/\b[O0]RL\b/g, "DRL")
     .replace(/\bDR[I|l]\b/g, "DRL")
     .replace(/\bM7R\b/gi, "MTR")
+    .replace(/\s+(?:ENE|IEEE|ww|we|ow|Co)$/gi, "")
     .replace(/["”]/g, '"')
     .replace(/['’]/g, "'");
 }
@@ -49,8 +52,8 @@ export async function parseScreenshotImage(buffer: Buffer): Promise<{
     const units: string[] = [];
 
     try {
-      // Qty Column Band (~63% to 73% of image width in standard RFQ tables)
-      const qtyLeft = Math.floor(width * 0.62);
+      // Qty Column Band (~58% to 69% of image width in standard RFQ tables)
+      const qtyLeft = Math.floor(width * 0.58);
       const qtyWidth = Math.floor(width * 0.11);
       const qtyCrop = await sharp(buffer)
         .extract({ left: qtyLeft, top: 0, width: qtyWidth, height })
@@ -70,8 +73,8 @@ export async function parseScreenshotImage(buffer: Buffer): Promise<{
         }
       }
 
-      // Unit Column Band (~72% to 82% of image width)
-      const unitLeft = Math.floor(width * 0.72);
+      // Unit Column Band (~68% to 78% of image width)
+      const unitLeft = Math.floor(width * 0.68);
       const unitWidth = Math.floor(width * 0.10);
       const unitCrop = await sharp(buffer)
         .extract({ left: unitLeft, top: 0, width: unitWidth, height })

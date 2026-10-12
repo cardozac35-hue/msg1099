@@ -361,16 +361,110 @@ export default function NewEnquiryPage() {
     }
   };
 
-  // Screenshot / Image OCR Handler — runs entirely client-side via tesseract.js WASM
+  // Helper to upscale and contrast-enhance screenshot on canvas for sharp OCR
+  const preprocessScreenshotForOcr = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(img.src);
+              return;
+            }
+            const scale = 2.5;
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+              const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+              const contrast = (gray - 128) * 1.6 + 128;
+              const clamped = Math.min(255, Math.max(0, contrast));
+              data[i] = clamped;
+              data[i + 1] = clamped;
+              data[i + 2] = clamped;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            resolve(canvas.toDataURL("image/png"));
+          } catch {
+            resolve(img.src);
+          }
+        };
+        img.onerror = () => resolve(URL.createObjectURL(file));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(URL.createObjectURL(file));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Screenshot / Image OCR Handler — Server sharp OCR first, client canvas fallback
   const processImageOcr = async (file: File) => {
     setIsParsingExcel(true);
     setImportNotice({
-      text: `🖼️ Scanning screenshot "${file.name || "clipboard-image"}" with OCR... (loading engine)`,
+      text: `🖼️ Scanning screenshot "${file.name || "clipboard-image"}" with OCR...`,
       type: "success",
     });
 
+    // 1. Try high-precision server OCR first (Sharp contrast + Tesseract column detection)
     try {
-      // Dynamically import tesseract.js (runs in browser via WASM)
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/quotations/ocr-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.items && data.items.length > 0) {
+          const formattedItems = data.items.map((it: any) => ({
+            productId: "",
+            itemDescription: it.description,
+            category: it.category || "Pipes & Tubes",
+            materialGrade: it.materialGrade || "",
+            standard: it.standard || "",
+            size: it.size || "",
+            pressureClass: it.pressureClass || "",
+            connectionType: it.connectionType || "",
+            quantity: it.quantity || 1,
+            unitOfMeasure: it.unit || "MTR",
+            customerTargetUnitPrice: it.unitPrice || 0,
+            notes: it.remarks || "",
+          }));
+
+          setItems(formattedItems);
+          setImportNotice({
+            text: `📸 Successfully extracted ${formattedItems.length} quotation items from your screenshot!`,
+            type: "success",
+          });
+          if (customerId) checkDuplicates(customerId, formattedItems);
+          setIsParsingExcel(false);
+          return;
+        }
+      }
+    } catch (serverErr) {
+      console.warn("Server OCR failed, attempting client-side fallback:", serverErr);
+    }
+
+    // 2. Client-side Fallback with Canvas 2.5x upscale & contrast boost
+    try {
+      setImportNotice({
+        text: `🖼️ Enhancing screenshot resolution for in-browser OCR...`,
+        type: "success",
+      });
+
+      const enhancedDataUrl = await preprocessScreenshotForOcr(file);
+
       const Tesseract = await import("tesseract.js");
       const worker = await Tesseract.createWorker("eng", undefined, {
         logger: (m: any) => {
@@ -383,36 +477,33 @@ export default function NewEnquiryPage() {
         },
       });
 
-      // Read image as data URL
-      const imageUrl = URL.createObjectURL(file);
-      const result = await worker.recognize(imageUrl);
-      URL.revokeObjectURL(imageUrl);
+      const result = await worker.recognize(enhancedDataUrl);
       const rawText = result.data.text || "";
       await worker.terminate();
 
       if (!rawText.trim()) {
         setImportNotice({
-          text: "Could not read any text from the screenshot. Please ensure the image is clear and contains visible table text.",
+          text: "Could not read text from screenshot. Please make sure the table has visible rows, or copy & paste text directly.",
           type: "error",
         });
         setIsParsingExcel(false);
         return;
       }
 
-      // Common OCR corrections for oil & gas industrial terms
+      // Industrial term cleanup
       const cleanedText = rawText
-        .replace(/\b5\.(80|40|160|20|10|STD|XS|XXS)\b/gi, "S.$1")
-        .replace(/\bANS!\b/g, "ANSI")
+        .replace(/\b[5$]\.(80|40|160|20|10|STD|XS|XXS)\b/gi, "S.$1")
+        .replace(/\bANS[!|l1]\b/g, "ANSI")
         .replace(/\bASTM\s+A1O6\b/gi, "ASTM A106")
+        .replace(/\bGR\.8\b/gi, "GR.B")
+        .replace(/\b[O0]RL\b/g, "DRL")
         .replace(/\bDR[I|l]\b/g, "DRL")
         .replace(/\bM7R\b/gi, "MTR")
+        .replace(/\s+(?:ENE|IEEE|ww|we|ow|Co)$/gi, "")
         .replace(/[\u201C\u201D]/g, '"')
         .replace(/[\u2018\u2019]/g, "'");
 
-      // Try to detect tabular rows (tab or multi-space separated)
       const lines = cleanedText.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
-
-      // Keywords to identify product description lines
       const oilGasKeywords = /pipe|valve|flange|fitting|astm|ansi|seamless|class|elbow|reducer|tee|coupling|gasket|stud|bolt|nut|\d+["']/i;
       const headerKeywords = /^(s\.?no|sno|s no|description|item|qty|quantity|unit|total|remarks|sl|sr)/i;
 
@@ -422,18 +513,15 @@ export default function NewEnquiryPage() {
       });
 
       const formattedItems: any[] = [];
-      let counter = 1;
-
       for (const line of candidateLines) {
-        // Try to parse out description, quantity, unit from the line
         let desc = line
           .replace(/^[^a-zA-Z0-9]+/, "")
           .replace(/^[0-9]+[\s.:|_-]+/, "")
+          .replace(/\s+(?:ENE|IEEE|ww|we|ow|Co)$/i, "")
           .trim();
 
         if (desc.length < 5) continue;
 
-        // Extract inline qty + unit
         let qty = 1;
         let unit = "MTR";
         const qtyUnitMatch = desc.match(/\b(\d+(?:\.\d+)?)\s*(MTR|EA|SET|KG|LOT|FT|PCS|NOS|SETS|PC|M)\b/i);
@@ -445,17 +533,6 @@ export default function NewEnquiryPage() {
           if (unit === "SETS") unit = "SET";
         }
 
-        // Also try tab-separated qty at end of line
-        const tabParts = line.split(/\t+/);
-        if (tabParts.length >= 3) {
-          const possibleQty = parseFloat(tabParts[tabParts.length - 3] || tabParts[tabParts.length - 2]);
-          if (!isNaN(possibleQty) && possibleQty > 0) qty = possibleQty;
-          const possibleUnit = (tabParts[tabParts.length - 2] || "").trim().toUpperCase();
-          if (/^(MTR|EA|SET|KG|LOT|FT|PCS|NOS)$/.test(possibleUnit)) unit = possibleUnit;
-          desc = tabParts.slice(0, -2).join(" ").replace(/^[0-9]+[\s.:|_-]+/, "").trim();
-        }
-
-        // Extract specs
         const sizeMatch = desc.match(/(\d+(?:\/\d+)?(?:\.\d+)?)\s*(?:"|inch|in\b)/i);
         const gradeMatch = desc.match(/\b(ASTM\s+[A-Z0-9]+(?:\s+GR\.[A-Z0-9]+)?|A106(?:\s+GR\.[A-Z0-9]+)?|A105|A333|A350|A312|A216\s+WCB)\b/i);
 
@@ -479,7 +556,6 @@ export default function NewEnquiryPage() {
           customerTargetUnitPrice: 0,
           notes: "",
         });
-        counter++;
       }
 
       if (formattedItems.length > 0) {
@@ -491,7 +567,7 @@ export default function NewEnquiryPage() {
         if (customerId) checkDuplicates(customerId, formattedItems);
       } else {
         setImportNotice({
-          text: "Could not detect clear line items in screenshot. Please ensure the table has product descriptions visible, or paste rows directly into the text area.",
+          text: "Could not detect clear line items in screenshot. Please ensure the table has visible rows, or copy & paste text directly.",
           type: "error",
         });
       }

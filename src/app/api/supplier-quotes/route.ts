@@ -4,6 +4,8 @@ import { dbService } from "@/lib/store";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const createSupplierQuoteSchema = z.object({
   enquiryId: z.string().min(1, "Enquiry ID required"),
   enquiryItemId: z.string().min(1, "Enquiry line item ID required"),

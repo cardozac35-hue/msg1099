@@ -4,6 +4,8 @@ import { dbService } from "@/lib/store";
 import { generateMasterSheetExcel } from "@/lib/excel";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const user = await requireAuth();

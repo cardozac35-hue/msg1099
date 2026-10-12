@@ -4,6 +4,8 @@ import { dbService } from "@/lib/store";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const reviseQuotationSchema = z.object({
   validityDate: z.string().min(1, "Validity date is required"),
   deliveryTerms: z.string().default("FOB Dubai Port (Incoterms 2020)"),

@@ -3,6 +3,8 @@ import { connectToDatabase, isDbConnected } from "@/lib/db";
 import { MaterialBatchModel } from "@/models";
 import { memoryMaterialBatches } from "@/services/document-service";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();

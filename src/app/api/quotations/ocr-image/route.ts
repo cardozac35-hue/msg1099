@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseScreenshotImage } from "@/lib/ocr-service";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";

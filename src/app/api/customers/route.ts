@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/session";
 import { dbService } from "@/lib/store";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const customerSchema = z.object({
   customerCode: z.string().min(2, "Customer code required"),
   name: z.string().min(2, "Customer name required"),

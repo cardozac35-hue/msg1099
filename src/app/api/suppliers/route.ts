@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/session";
 import { dbService } from "@/lib/store";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const supplierSchema = z.object({
   supplierCode: z.string().min(2, "Supplier code required"),
   name: z.string().min(2, "Supplier name required"),

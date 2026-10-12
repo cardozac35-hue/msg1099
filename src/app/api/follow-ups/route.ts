@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/session";
 import { dbService } from "@/lib/store";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const followUpSchema = z.object({
   enquiryId: z.string().min(1, "Enquiry reference is required"),
   enquiryNumber: z.string().min(1),

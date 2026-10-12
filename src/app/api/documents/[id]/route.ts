@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/session";
 import { documentService } from "@/services/document-service";
 import { UpdateDocumentSchema } from "@/lib/validation";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }

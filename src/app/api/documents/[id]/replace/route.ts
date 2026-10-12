@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/session";
 import { documentService } from "@/services/document-service";
 import { ReplaceDocumentSchema } from "@/lib/validation";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }

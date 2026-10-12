@@ -4,6 +4,8 @@ import { dbService } from "@/lib/store";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const updateStatusSchema = z.object({
   status: z.enum([
     "draft",

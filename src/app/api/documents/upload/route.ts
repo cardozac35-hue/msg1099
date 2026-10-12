@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/session";
 import { validateFile, uploadBufferToCloudinary, sanitizeFilename } from "@/lib/cloudinary";
 import { PERMISSIONS } from "@/lib/permissions";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();

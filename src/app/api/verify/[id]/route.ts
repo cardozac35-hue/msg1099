@@ -4,6 +4,8 @@ import { DocumentModel } from "@/models";
 import { memoryDocuments } from "@/services/document-service";
 import crypto from "crypto";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }

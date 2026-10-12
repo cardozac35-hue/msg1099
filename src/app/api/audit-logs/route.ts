@@ -4,6 +4,8 @@ import { connectToDatabase, isDbConnected } from "@/lib/db";
 import { AuditLogModel } from "@/models";
 import { PERMISSIONS } from "@/lib/permissions";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();

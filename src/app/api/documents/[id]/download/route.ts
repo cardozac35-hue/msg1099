@@ -4,6 +4,8 @@ import { documentService } from "@/services/document-service";
 import { generateSignedDocumentUrl } from "@/lib/cloudinary";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }

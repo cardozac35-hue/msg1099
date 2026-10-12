@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/session";
 import { documentService } from "@/services/document-service";
 import { CreateDocumentSchema } from "@/lib/validation";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();

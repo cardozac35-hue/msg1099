@@ -6,6 +6,16 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // Next.js 14: treat native/heavy server-only packages as external
+  experimental: {
+    serverComponentsExternalPackages: [
+      "sharp",
+      "tesseract.js",
+      "pdfkit",
+      "mongoose",
+      "xlsx",
+    ],
+  },
   images: {
     remotePatterns: [
       {

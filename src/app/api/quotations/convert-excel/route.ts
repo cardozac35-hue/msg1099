@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parsePastedExcelText, parseExcelBuffer } from "@/lib/excel-importer";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";

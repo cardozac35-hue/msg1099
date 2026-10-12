@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/session";
 import { dbService } from "@/lib/store";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }

@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/session";
 import { dbService } from "@/lib/store";
 import { calculateProfitAndMargin } from "@/lib/pricing";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // STRICT ADMIN GUARD

@@ -3,6 +3,8 @@ import { requireAuth, requireAdmin } from "@/lib/session";
 import { dbService } from "@/lib/store";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await requireAuth();

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateMsgQuotationPdf, MsgQuotationData } from "@/lib/msg-pdf";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const data: MsgQuotationData = await req.json();

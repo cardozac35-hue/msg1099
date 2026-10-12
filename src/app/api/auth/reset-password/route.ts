@@ -4,6 +4,8 @@ import { dbService } from "@/lib/store";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const resetPasswordSchema = z.object({
   email: z.string().email(),
   newPassword: z.string().min(8, "Password must be at least 8 characters"),

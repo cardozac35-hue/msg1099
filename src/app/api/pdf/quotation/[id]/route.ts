@@ -4,6 +4,8 @@ import { dbService } from "@/lib/store";
 import { generateQuotationPdf } from "@/lib/pdf";
 import { generateMsgQuotationPdf } from "@/lib/msg-pdf";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }

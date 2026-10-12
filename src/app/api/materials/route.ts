@@ -3,6 +3,8 @@ import { connectToDatabase, isDbConnected } from "@/lib/db";
 import { MaterialModel } from "@/models";
 import { memoryMaterials } from "@/services/document-service";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();

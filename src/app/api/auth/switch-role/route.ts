@@ -3,6 +3,8 @@ import { SEED_USERS } from "@/lib/seed-data";
 import { setSessionCookie } from "@/lib/auth";
 import { UserRole } from "@/lib/permissions";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { role, email } = await req.json();

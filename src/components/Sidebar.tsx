@@ -25,6 +25,18 @@ import {
   Flame,
   ShieldCheck,
   User,
+  Network,
+  ClipboardList,
+  Clock,
+  AlertCircle,
+  CalendarDays,
+  FileCheck,
+  Sliders,
+  FlaskConical,
+  CheckCheck,
+  FolderSync,
+  UploadCloud,
+  Files,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -95,6 +107,30 @@ export function Sidebar({
       ],
     },
     {
+      label: "Material Documents",
+      items: [
+        { label: "Document Dashboard", href: "/dashboard/documents", icon: LayoutDashboard },
+        { label: "All Documents", href: "/dashboard/documents/all", icon: Files },
+        { label: "Upload Document", href: "/dashboard/documents/upload", icon: UploadCloud },
+        { label: "Material Traceability", href: "/dashboard/documents/traceability", icon: Network },
+        { label: "Order Documents", href: "/dashboard/documents/order-documents", icon: ClipboardList },
+        { label: "Pending Reviews", href: "/dashboard/documents/pending-reviews", icon: Clock },
+        { label: "Missing Documents", href: "/dashboard/documents/missing-documents", icon: AlertCircle },
+        { label: "Expiry Tracking", href: "/dashboard/documents/expiry-tracking", icon: CalendarDays },
+        { label: "Document Requirements", href: "/dashboard/documents/requirements", icon: FileCheck },
+        { label: "Audit History", href: "/dashboard/documents/audit-history", icon: History },
+        { label: "Document Settings", href: "/dashboard/documents/settings", icon: Sliders },
+      ],
+    },
+    {
+      label: "MSG Engineering Suite",
+      items: [
+        { label: "MTC Chemical & Mech Analyzer", href: "/dashboard/documents/mtc-analyzer", icon: FlaskConical },
+        { label: "Project Specs (Aramco/ADNOC)", href: "/dashboard/documents/project-specs", icon: CheckCheck },
+        { label: "Bulk Heat No. Matcher", href: "/dashboard/documents/bulk-upload", icon: FolderSync },
+      ],
+    },
+    {
       label: "Intelligence & Reports",
       items: [
         { label: "Sales Reports", href: "/reports/sales", icon: BarChart3 },
@@ -144,17 +180,28 @@ export function Sidebar({
         )}
       >
         {/* Brand Banner */}
-        <div className="h-16 px-5 flex items-center justify-between border-b border-charcoal-700/80 bg-charcoal-600/50">
-          <Link href="/dashboard" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-lg bg-maroon-600 flex items-center justify-center text-white shadow-md group-hover:bg-maroon-500 transition-colors">
-              <Flame className="w-5 h-5 text-amber-300" />
+        <div className="h-16 px-4 flex items-center justify-between border-b border-charcoal-700/80 bg-charcoal-600/50">
+          <Link href="/dashboard" className="flex items-center gap-3 group min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-white p-1 flex items-center justify-center shadow-md shrink-0 border border-slate-600">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/msg-logo.png"
+                alt="MSG Oilfield Logo"
+                className="max-h-full max-w-full object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (!target.src.includes("msgoilfield.com")) {
+                    target.src = "https://www.msgoilfield.com/logo.png";
+                  }
+                }}
+              />
             </div>
-            <div>
-              <span className="text-sm font-bold tracking-tight text-white block font-sans">
-                OIL & GAS
+            <div className="min-w-0">
+              <span className="text-sm font-bold tracking-tight text-white block font-sans truncate">
+                MSG OILFIELD
               </span>
-              <span className="text-[10px] tracking-widest uppercase font-semibold text-maroon-300 block -mt-1">
-                SALES HUB
+              <span className="text-[9px] tracking-wider uppercase font-semibold text-amber-400 block -mt-0.5 truncate">
+                SOURCING • RELIABLE & SYSTEMATIC
               </span>
             </div>
           </Link>

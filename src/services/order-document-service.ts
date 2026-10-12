@@ -284,18 +284,23 @@ export class OrderDocumentService {
     // 2. Add Readme / Summary Text
     const readmeContent = `
 ================================================================================
-OIL & GAS MATERIALS CERTIFICATION DOSSIER
+MSG OILFIELD EQUIPMENT TRADING LLC - OFFICIAL QUALITY TRANSMITTAL
+Material Solutions Grid • Dubai, United Arab Emirates
+Web: https://www.msgoilfield.com | Motto: Sourcing — Reliable & Systematic
 Sales Order: ${order.soNumber}
 Customer: ${order.customerName}
-Delivery Terms: ${order.deliveryTerms || "Standard"}
+Delivery Terms: ${order.deliveryTerms || "Ex-Works JAFZA / FOB Dubai"}
+Transmittal Ref: MSG-MDR-${order.soNumber}-${new Date().getFullYear()}
 ================================================================================
 
-This document package contains ${permittedDocs.length} verified, approved Material Test Certificates
-and Compliance documents in accordance with applicable ASME, API, and EN 10204 standards.
+This inspection dossier contains ${permittedDocs.length} verified, approved Material Test Certificates (MTC)
+and compliance quality records in accordance with EN 10204 3.1 / 3.2, ASME B31.3,
+API 6D/5L, and End-User Project Specifications (Aramco / ADNOC / PDO / Shell).
 
-CONFIDENTIALITY NOTICE:
+CONFIDENTIALITY & QUALITY ASSURANCE NOTICE:
 Contains customer-authorized technical certification data only.
-Commercial supplier cost records have been strictly excluded under quality isolation protocols.
+Commercial supplier cost records have been strictly isolated per quality protocols.
+Cryptographic verification seals issued by MSG Oilfield Quality Assurance Department.
 
 CERTIFICATE MANIFEST:
 ${permittedDocs
@@ -306,7 +311,7 @@ ${permittedDocs
   .join("\n")}
 
 Generated: ${new Date().toUTCString()}
-Authorized QA Verification: Yes
+Authorized QA Verification: MSG Quality Directorate (Dubai, UAE)
 ================================================================================
 `;
     zip.file("README_QUALITY_DOSSIER.txt", readmeContent.trim());

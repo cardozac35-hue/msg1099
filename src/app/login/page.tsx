@@ -53,15 +53,29 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         {/* Brand Header */}
         <div className="flex justify-center mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-maroon-600 flex items-center justify-center text-white shadow-xl border border-maroon-400/40">
-            <Flame className="w-8 h-8 text-amber-300" />
+          <div className="px-5 py-2.5 bg-white rounded-2xl flex items-center justify-center shadow-2xl border border-slate-700">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/msg-logo.png"
+              alt="MSG Oilfield Logo"
+              className="h-10 w-auto object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (!target.src.includes("msgoilfield.com")) {
+                  target.src = "https://www.msgoilfield.com/logo.png";
+                }
+              }}
+            />
           </div>
         </div>
         <h2 className="text-center text-2xl font-bold tracking-tight text-white font-sans">
-          Oil & Gas Sales Hub
+          MSG OILFIELD
         </h2>
-        <p className="mt-1 text-center text-xs font-medium text-slate-400 uppercase tracking-widest">
-          Enterprise B2B Quotation Management System
+        <p className="mt-1 text-center text-xs font-semibold text-amber-400 uppercase tracking-widest">
+          Material Solutions Grid • Dubai, UAE
+        </p>
+        <p className="text-center text-[11px] text-slate-400 mt-0.5">
+          Sourcing — Reliable & Systematic
         </p>
       </div>
 

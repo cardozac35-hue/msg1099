@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Search,
   Bell,
@@ -108,6 +109,21 @@ export function Header({ currentUser: initialUser }: HeaderProps) {
           />
         </div>
       </form>
+
+      {/* MSG Oilfield Operations Hub Banner */}
+      <div className="hidden lg:flex items-center gap-3">
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[11px] font-semibold text-slate-800">MSG QA Desk</span>
+          <span className="text-[10px] text-slate-500">• Dubai, UAE</span>
+        </div>
+        <Link
+          href="/dashboard/documents/mtc-analyzer"
+          className="text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition"
+        >
+          <span>⚡ MTC Analyzer</span>
+        </Link>
+      </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-3">

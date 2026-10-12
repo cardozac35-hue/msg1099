@@ -12,10 +12,17 @@ import {
   FileText,
   ShieldCheck,
   Building,
-  Truck,
   ExternalLink,
   UploadCloud,
   FileArchive,
+  QrCode,
+  Printer,
+  Copy,
+  Check,
+  Package,
+  Award,
+  Sparkles,
+  Truck,
 } from "lucide-react";
 import { DocumentStatusBadge } from "./document-status-badge";
 import { useToast } from "@/components/ui/Toast";
@@ -37,6 +44,8 @@ export function DocumentChecklist({
   const [checklistData, setChecklistData] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingPack, setIsGeneratingPack] = useState(false);
+  const [showOrderQrModal, setShowOrderQrModal] = useState(false);
+  const [copiedOrderLink, setCopiedOrderLink] = useState(false);
 
   // Load list of available orders
   useEffect(() => {
@@ -162,31 +171,41 @@ export function DocumentChecklist({
           </div>
         </div>
 
-        {/* Generate Pack Action */}
-        {orderType === "SO" && (
+        {/* Order Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={handleDownloadPack}
-            disabled={isGeneratingPack || !checklistData?.shareableApprovedDocumentsCount}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold shadow-xs flex items-center gap-2 transition"
+            onClick={() => setShowOrderQrModal(true)}
+            className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-xs flex items-center gap-2 transition cursor-pointer"
           >
-            {isGeneratingPack ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Assembling ZIP Pack...</span>
-              </>
-            ) : (
-              <>
-                <FileArchive className="w-4 h-4" />
-                <span>
-                  Download Customer Document Pack (ZIP){" "}
-                  {checklistData?.shareableApprovedDocumentsCount
-                    ? `(${checklistData.shareableApprovedDocumentsCount} Docs)`
-                    : ""}
-                </span>
-              </>
-            )}
+            <QrCode className="w-4 h-4" />
+            <span>Generate Order QR & Pallet Tag</span>
           </button>
-        )}
+
+          {orderType === "SO" && (
+            <button
+              onClick={handleDownloadPack}
+              disabled={isGeneratingPack || !checklistData?.shareableApprovedDocumentsCount}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold shadow-xs flex items-center gap-2 transition cursor-pointer"
+            >
+              {isGeneratingPack ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Assembling ZIP Pack...</span>
+                </>
+              ) : (
+                <>
+                  <FileArchive className="w-4 h-4" />
+                  <span>
+                    Download Customer Document Pack (ZIP){" "}
+                    {checklistData?.shareableApprovedDocumentsCount
+                      ? `(${checklistData.shareableApprovedDocumentsCount} Docs)`
+                      : ""}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Order Context & Readiness Banner */}
@@ -401,6 +420,162 @@ export function DocumentChecklist({
           </table>
         </div>
       </div>
+
+      {/* MSG Order QR & Pallet Tag Modal */}
+      {showOrderQrModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <QrCode className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Order QR Code & Yard Pallet Tag
+                  </h3>
+                  <p className="text-[10px] text-amber-700 font-semibold uppercase">
+                    MSG Oilfield Equipment Trading LLC • Dubai Yard
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOrderQrModal(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Printable Pallet Tag View */}
+            <div className="mt-4 space-y-4">
+              <div className="border-2 border-slate-900 rounded-xl p-4 bg-white text-slate-900 shadow-sm space-y-3">
+                {/* Tag Header */}
+                <div className="flex items-center justify-between border-b-2 border-slate-900 pb-2">
+                  <div className="flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/msg-logo.png"
+                      alt="MSG"
+                      className="h-7 w-auto object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.src.includes("msgoilfield.com")) {
+                          target.src = "https://www.msgoilfield.com/logo.png";
+                        }
+                      }}
+                    />
+                    <div>
+                      <span className="font-black text-xs block leading-none">
+                        MSG OILFIELD TRADING
+                      </span>
+                      <span className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">
+                        DUBAI JAFZA WAREHOUSE
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-[9px] uppercase tracking-wider">
+                    {checklistData?.dispatchReady ? "CLEARED FOR DISPATCH" : "HOLD: QA REVIEW"}
+                  </span>
+                </div>
+
+                {/* QR and Order Identity */}
+                <div className="flex items-center gap-4">
+                  <div className="w-28 h-28 border-2 border-slate-900 rounded-lg p-1.5 flex flex-col items-center justify-center bg-slate-50 shrink-0">
+                    <QrCode className="w-20 h-20 text-slate-900" />
+                    <span className="text-[7px] font-black tracking-tighter uppercase text-slate-800">
+                      SCAN FOR ALL DOCS
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 min-w-0 text-xs">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">
+                        Order Passport:
+                      </span>
+                      <span className="font-black text-base font-mono block text-slate-900">
+                        {orderNumber}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">
+                        Client / Destination:
+                      </span>
+                      <span className="font-semibold text-slate-800 truncate block">
+                        {checklistData?.order?.customerName || checklistData?.order?.supplierName || "Energy Client"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase block">
+                        Delivery Terms:
+                      </span>
+                      <span className="font-medium text-slate-600 truncate block">
+                        {checklistData?.order?.deliveryTerms || "Ex-Works JAFZA / FOB Dubai"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tag Footer */}
+                <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-[10px]">
+                  <span className="font-mono text-slate-500">
+                    Code: MSG-ORD-QR-{orderNumber}
+                  </span>
+                  <span className="font-bold text-amber-700">
+                    {checklistData?.shareableApprovedDocumentsCount || 0} MTCs Verified
+                  </span>
+                </div>
+              </div>
+
+              {/* Instructions for Yard Store Person */}
+              <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  Store Person & Yard Driver Instructions:
+                </p>
+                <p className="text-[11px] leading-relaxed text-amber-800">
+                  Scan this QR code with any mobile camera in the warehouse. It instantly displays
+                  all attached Material Test Certificates (3.1/3.2), heat numbers, and inspection charts
+                  without needing a login password.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/verify/order/${orderNumber}`;
+                    navigator.clipboard.writeText(url);
+                    setCopiedOrderLink(true);
+                    setTimeout(() => setCopiedOrderLink(false), 2000);
+                  }}
+                  className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  {copiedOrderLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedOrderLink ? "Link Copied!" : "Copy Order URL"}</span>
+                </button>
+
+                <button
+                  onClick={() => window.print()}
+                  className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Pallet Tag</span>
+                </button>
+
+                <Link
+                  href={`/verify/order/${orderNumber}`}
+                  target="_blank"
+                  className="py-2 px-4 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Yard Scan View</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

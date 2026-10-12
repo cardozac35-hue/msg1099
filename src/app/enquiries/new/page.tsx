@@ -23,8 +23,9 @@ import {
   FileText,
   ShieldCheck,
   Percent,
+  Camera,
 } from "lucide-react";
-import { DEFAULT_MSG_TERMS } from "@/lib/msg-pdf";
+import { DEFAULT_MSG_TERMS } from "@/lib/msg-terms";
 import { formatCurrency } from "@/lib/utils";
 
 const SAMPLE_RFQ_PASTE_TEXT = `1\tPIPE 6" S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL\t240\tMTR\t114.00
@@ -357,6 +358,78 @@ export default function NewEnquiryPage() {
       setImportNotice({ text: err.message || "File upload failed", type: "error" });
     } finally {
       setIsParsingExcel(false);
+    }
+  };
+
+  // Screenshot / Image OCR Handler
+  const processImageOcr = async (file: File) => {
+    setIsParsingExcel(true);
+    setImportNotice({
+      text: `🖼️ Scanning screenshot "${file.name || "clipboard-image"}" with OCR...`,
+      type: "success",
+    });
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/quotations/ocr-image", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.items && data.items.length > 0) {
+        const formattedItems = data.items.map((it: any) => ({
+          productId: "",
+          itemDescription: it.description,
+          category: it.category || "Pipes & Tubes",
+          materialGrade: it.materialGrade || "",
+          standard: it.standard || "",
+          size: it.size || "",
+          pressureClass: it.pressureClass || "",
+          connectionType: it.connectionType || "",
+          quantity: it.quantity || 1,
+          unitOfMeasure: it.unit || "MTR",
+          customerTargetUnitPrice: it.unitPrice || 0,
+          notes: it.remarks || "",
+        }));
+
+        setItems(formattedItems);
+        setImportNotice({
+          text: `📸 Successfully extracted ${formattedItems.length} quotation items from your screenshot!`,
+          type: "success",
+        });
+        if (customerId) checkDuplicates(customerId, formattedItems);
+      } else {
+        setImportNotice({
+          text:
+            data.error ||
+            "Could not detect clear line items in screenshot. Please ensure the table text is visible or paste rows directly into the text area.",
+          type: "error",
+        });
+      }
+    } catch (err: any) {
+      setImportNotice({ text: err.message || "Screenshot OCR processing failed", type: "error" });
+    } finally {
+      setIsParsingExcel(false);
+    }
+  };
+
+  // Clipboard Paste Event Handler (Ctrl+V)
+  const handleClipboardPaste = (e: React.ClipboardEvent) => {
+    const clipItems = e.clipboardData?.items;
+    if (!clipItems) return;
+
+    for (let i = 0; i < clipItems.length; i++) {
+      const it = clipItems[i];
+      if (it.type.startsWith("image/")) {
+        const file = it.getAsFile();
+        if (file) {
+          e.preventDefault();
+          processImageOcr(file);
+          return;
+        }
+      }
     }
   };
 
@@ -840,24 +913,29 @@ export default function NewEnquiryPage() {
                 </div>
               </div>
 
-              {/* Paste Textarea */}
-              <textarea
-                rows={4}
-                value={pasteText}
-                onChange={(e) => setPasteText(e.target.value)}
-                placeholder="Paste rows copied directly from Excel, CSV, or WhatsApp message:
+              {/* Paste Textarea with onPaste screenshot support */}
+              <div onPaste={handleClipboardPaste} className="relative">
+                <textarea
+                  rows={4}
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  onPaste={handleClipboardPaste}
+                  placeholder="Paste rows copied directly from Excel, CSV, or WhatsApp message:
 1 | PIPE 6'' S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL | 240 | MTR | 114.00
 2 | PIPE 8'' S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL | 144 | MTR | 165.00
-3 | PIPE 10'' S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL | 120 | MTR | 248.00"
-                className="w-full text-xs font-mono p-3 rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-inner"
-              />
+3 | PIPE 10'' S.80 SEAMLESS CS MATERIAL ACC TO ASTM A106 GR.B DIMENSION ACC TO ANSI B36.10 DRL | 120 | MTR | 248.00
+
+💡 Tip: You can also take a screenshot of any spreadsheet and press Ctrl + V right here to convert via OCR!"
+                  className="w-full text-xs font-mono p-3 rounded-xl border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-inner"
+                />
+              </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                {/* File Upload Alternative */}
-                <div className="flex items-center gap-2">
+                {/* File Upload & Screenshot Alternative */}
+                <div className="flex items-center gap-2 flex-wrap">
                   <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer transition-colors shadow-2xs">
                     <Upload className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Upload .xlsx / .csv</span>
+                    <span>Upload Excel (.xlsx, .xls)</span>
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv"
@@ -865,8 +943,22 @@ export default function NewEnquiryPage() {
                       className="hidden"
                     />
                   </label>
-                  <span className="text-[11px] text-slate-500">
-                    Supports Excel (.xlsx, .csv) with headers
+
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer transition-colors shadow-2xs">
+                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>📸 Upload Screenshot / Image (OCR)</span>
+                    <input
+                      type="file"
+                      accept="image/*,.png,.jpg,.jpeg,.webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) processImageOcr(file);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  <span className="text-[11px] text-slate-500 hidden md:inline">
+                    Or press <kbd className="px-1 py-0.5 bg-slate-200 rounded font-mono text-[10px]">Ctrl+V</kbd> to paste screenshot
                   </span>
                 </div>
 
@@ -1145,9 +1237,18 @@ export default function NewEnquiryPage() {
               {/* Modal Top Bar */}
               <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between z-10">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-maroon-700 text-white flex items-center justify-center font-bold text-xs">
-                    MSG
-                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/msg-logo.png"
+                    alt="MSG Oilfield Logo"
+                    className="h-9 w-auto object-contain shrink-0"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target.src.includes("msgoilfield.com")) {
+                        target.src = "https://www.msgoilfield.com/logo.png";
+                      }
+                    }}
+                  />
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">
                       Official Quotation Format Preview
@@ -1181,16 +1282,30 @@ export default function NewEnquiryPage() {
               <div className="p-6 sm:p-8 space-y-6 font-sans text-xs text-slate-800">
                 {/* Header Banner */}
                 <div className="flex flex-col sm:flex-row items-center justify-between border-b-2 border-maroon-700 pb-4 gap-4">
-                  <div>
-                    <h1 className="text-xl font-black text-maroon-800 tracking-tight">
-                      MSG OILFIELD EQUIPMENT TRADING LLC
-                    </h1>
-                    <p className="text-[11px] text-slate-600 mt-0.5">
-                      P.O. Box: 49281, Dubai, United Arab Emirates • TRN: 100492817200003
-                    </p>
-                    <p className="text-[11px] text-slate-600">
-                      Tel: +971 4 881 0000 • Email: sales@msgoilfield.com • Web: www.msgoilfield.com
-                    </p>
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/msg-logo.png"
+                      alt="MSG Oilfield Logo"
+                      className="h-12 w-auto object-contain shrink-0"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.src.includes("msgoilfield.com")) {
+                          target.src = "https://www.msgoilfield.com/logo.png";
+                        }
+                      }}
+                    />
+                    <div>
+                      <h1 className="text-xl font-black text-maroon-800 tracking-tight">
+                        MSG OILFIELD EQUIPMENT TRADING LLC
+                      </h1>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        P.O. Box: 49281, Dubai, United Arab Emirates • TRN: 100492817200003
+                      </p>
+                      <p className="text-[11px] text-slate-600">
+                        Tel: +971 4 881 0000 • Email: sales@msgoilfield.com • Web: www.msgoilfield.com
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right border-l-2 border-slate-200 pl-4 shrink-0">
                     <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-900 border border-amber-300 font-bold text-[10px] uppercase block">

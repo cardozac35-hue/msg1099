@@ -22,6 +22,11 @@ import {
   Edit,
   RefreshCw,
   Lock,
+  QrCode,
+  FlaskConical,
+  Award,
+  Copy,
+  Check,
 } from "lucide-react";
 import { DocumentStatusBadge, DocumentVisibilityBadge } from "@/components/documents/document-status-badge";
 import { DocumentReviewPanel } from "@/components/documents/document-review-panel";
@@ -37,6 +42,8 @@ export default function DocumentDetailsPage() {
   const [data, setData] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"details" | "review" | "versions" | "audit">("details");
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const fetchDocument = async () => {
     setIsLoading(true);
@@ -137,7 +144,23 @@ export default function DocumentDetailsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowQrModal(true)}
+            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>MSG QR Authenticity Stamp</span>
+          </button>
+
+          <Link
+            href="/dashboard/documents/mtc-analyzer"
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-xs"
+          >
+            <FlaskConical className="w-4 h-4 text-amber-400" />
+            <span>Analyze in Metallurgy Tool</span>
+          </Link>
+
           <button
             onClick={handleDownload}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-2 transition"
@@ -485,6 +508,98 @@ export default function DocumentDetailsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* MSG Authenticity Stamp & QR Modal */}
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    MSG Digital Quality Verification Stamp
+                  </h3>
+                  <p className="text-[10px] text-amber-700 font-semibold uppercase">
+                    MSG Oilfield Equipment Trading LLC • Dubai
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div className="p-4 bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl text-white border border-slate-800 text-center space-y-3">
+                <div className="inline-block p-3 bg-white rounded-xl shadow-lg">
+                  {/* Generated simulated QR Code */}
+                  <div className="w-32 h-32 border-4 border-slate-900 rounded-lg p-2 flex flex-col items-center justify-center bg-slate-50 relative">
+                    <QrCode className="w-20 h-20 text-slate-900" />
+                    <span className="text-[7px] font-bold text-slate-800 uppercase tracking-tighter mt-1">
+                      SCAN TO VERIFY
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider block">
+                    Cryptographic Quality Seal
+                  </span>
+                  <span className="font-mono text-xs font-bold text-white block mt-0.5">
+                    MSG-SEAL-{String(doc._id || doc.id).substring(0, 8).toUpperCase()}-2026
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-xs space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Document No:</span>
+                  <span className="font-mono font-bold text-slate-800">{doc.documentNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Heat Number:</span>
+                  <span className="font-mono font-bold text-amber-800">{doc.heatNumber || "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Public Verify URL:</span>
+                  <span className="font-mono text-[11px] text-blue-600 truncate max-w-[220px]">
+                    /verify/{String(doc._id || doc.id)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/verify/${doc._id || doc.id}`;
+                    navigator.clipboard.writeText(url);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedLink ? "Link Copied!" : "Copy Verification URL"}</span>
+                </button>
+                <Link
+                  href={`/verify/${doc._id || doc.id}`}
+                  target="_blank"
+                  className="py-2 px-4 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Public Portal</span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       )}

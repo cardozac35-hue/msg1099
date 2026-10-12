@@ -48,7 +48,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
         <div className="w-10 h-10 border-3 border-maroon-600 border-t-transparent rounded-full animate-spin" />
         <span className="mt-4 text-xs font-semibold text-slate-600 tracking-wider uppercase font-sans">
-          Authenticating Oil & Gas Sales Hub...
+          Authenticating MSG Oilfield Portal...
         </span>
       </div>
     );

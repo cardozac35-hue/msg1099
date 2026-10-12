@@ -25,13 +25,27 @@ export function Header({
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="hidden sm:block">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Industrial B2B Portal
-          </span>
-          <h1 className="text-sm font-bold text-slate-800 -mt-0.5">
-            Commercial Pipeline & Tender Desk
-          </h1>
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/msg-logo.png"
+            alt="MSG Oilfield"
+            className="h-8 w-auto object-contain hidden sm:block"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (!target.src.includes("msgoilfield.com")) {
+                target.src = "https://www.msgoilfield.com/logo.png";
+              }
+            }}
+          />
+          <div className="hidden sm:block border-l border-slate-200 pl-3">
+            <span className="text-xs font-bold text-slate-900 block leading-tight">
+              MSG OILFIELD EQUIPMENT TRADING LLC
+            </span>
+            <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider block">
+              SOURCING • RELIABLE & SYSTEMATIC
+            </span>
+          </div>
         </div>
       </div>
 

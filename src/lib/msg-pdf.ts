@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import path from "path";
+import fs from "fs";
 
 export interface MsgQuotationItem {
   sNo?: number | string;
@@ -46,39 +48,8 @@ export interface MsgQuotationData {
   signatoryCompany?: string;
 }
 
-export const DEFAULT_MSG_TERMS = {
-  commercial: {
-    price: "IN USD, EX OUR WAREHOUSE IN DUBAI",
-    validity: "5 DAYS",
-    payment: "50% ADVANCE ALONG WITH THE ORDER , BALANCE 50% ON READINESS",
-    cancellation:
-      "Once order placed, cancellation of any items/deduction in the quantity will not be acceptable. Cancellation charges will apply.",
-    ld: "Liquidated Damages not applicable unless mutually agreed in writing before placement of order.",
-  },
-  technical: {
-    delivery:
-      "Exstock, subject to unsold. Please allow 5/6 working days to keep the material ready.\nDelivery is considered from technically /commercially clear purchase order or from the approval of Drawings & Documents, if applicable.\nDelivery starts from the date of advance payment/LC opening, if applicable.",
-    mtc: "3.1",
-    make: "EUROPEAN",
-    warranty: "18 months from date of PO or 12 months from the date of commissioning, whichever is soonest.",
-    legalization: "Charges Extra",
-    packing: "Sea Worthy/Road Worthy Packing Included",
-    services:
-      "The offer is valid for the quoted product only. Commissioning and other services not applicable and hence are not included in the offer",
-  },
-  other: [
-    "All prices offered for complete quotation, partial order subject to requote.",
-    "In case of additional requirement, price and delivery shall be reconfirmed.",
-    "Any clarification/approvals required post order, shall be confirmed quickly by client. Any delay to confirm will be excluded from agreed delivery.",
-    "No specification was provided with the enquiry, and hence none considered. Any additional spec involved/required, subject to requote.",
-    "All items offered bare as per manufacturer standard finishing without any cladding / coating / overlay / painting.",
-    "The prices would be fixed and firm for the duration of the Purchase Order.",
-    "We do not accept responsibility for process compatibility. Customer is responsible for material suitability to meet their process conditions.",
-    "Incase of any rejection/ returns. MUST be pre-approved by MSG Sales staff/QAQC",
-    "Any rejection due to damage or short supply to be reported within 2 week from the receipt of material.",
-    "Pipe will be supplied in DRL(10 -11.9mtr) as per availability. Actual quantity supplied will be invoiced.",
-  ],
-};
+import { DEFAULT_MSG_TERMS } from "./msg-terms";
+export { DEFAULT_MSG_TERMS };
 
 export function generateMsgQuotationPdf(data: MsgQuotationData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -114,10 +85,20 @@ export function generateMsgQuotationPdf(data: MsgQuotationData): Promise<Buffer>
         doc.rect(LEFT, y, CONTENT_WIDTH, 65).strokeColor("#000000").lineWidth(1).stroke();
 
         // 1. Logo area (Left)
-        // Red flame symbol + MSG stylized text
-        doc.fillColor("#E11D48").fontSize(18).font("Helvetica-Bold").text("MSG", LEFT + 35, y + 16);
-        doc.fillColor("#242C36").fontSize(18).font("Helvetica-Bold").text("MSG", LEFT + 34, y + 15);
-        doc.fillColor("#64748B").fontSize(5.5).font("Helvetica").text("SOURCING, RELIABLE & SYSTEMATIC", LEFT + 12, y + 42);
+        const logoPath = path.join(process.cwd(), "public", "msg-logo.png");
+        if (fs.existsSync(logoPath)) {
+          try {
+            doc.image(logoPath, LEFT + 8, y + 8, { width: 98, height: 48, fit: [98, 48] });
+          } catch {
+            doc.fillColor("#E11D48").fontSize(18).font("Helvetica-Bold").text("MSG", LEFT + 35, y + 16);
+            doc.fillColor("#242C36").fontSize(18).font("Helvetica-Bold").text("MSG", LEFT + 34, y + 15);
+            doc.fillColor("#64748B").fontSize(5.5).font("Helvetica").text("SOURCING, RELIABLE & SYSTEMATIC", LEFT + 12, y + 42);
+          }
+        } else {
+          doc.fillColor("#E11D48").fontSize(18).font("Helvetica-Bold").text("MSG", LEFT + 35, y + 16);
+          doc.fillColor("#242C36").fontSize(18).font("Helvetica-Bold").text("MSG", LEFT + 34, y + 15);
+          doc.fillColor("#64748B").fontSize(5.5).font("Helvetica").text("SOURCING, RELIABLE & SYSTEMATIC", LEFT + 12, y + 42);
+        }
 
         // Vertical divider for logo
         doc.moveTo(LEFT + 115, y).lineTo(LEFT + 115, y + 65).stroke();
@@ -360,7 +341,7 @@ export function generateMsgQuotationPdf(data: MsgQuotationData): Promise<Buffer>
       doc.font("Helvetica-Bold").fontSize(7.5).text("OTHER TERMS:", LEFT, currentY);
       currentY += 10;
 
-      other.slice(0, 7).forEach((term, i) => {
+      other.slice(0, 7).forEach((term: string, i: number) => {
         const bullet = `${i + 1}  `;
         doc.font("Helvetica").fontSize(6.5).text(bullet + term, LEFT + 10, currentY, { width: CONTENT_WIDTH - 15 });
         currentY += doc.heightOfString(bullet + term, { width: CONTENT_WIDTH - 15 }) + 2;
@@ -375,7 +356,7 @@ export function generateMsgQuotationPdf(data: MsgQuotationData): Promise<Buffer>
       // Remaining other terms (terms 8, 9, 10 etc.)
       const remainingTerms = other.slice(7);
       if (remainingTerms.length > 0) {
-        remainingTerms.forEach((term, i) => {
+        remainingTerms.forEach((term: string, i: number) => {
           const bullet = `${i + 8}  `;
           doc.font("Helvetica").fontSize(7).text(bullet + term, LEFT + 10, p2Y, { width: CONTENT_WIDTH - 15 });
           p2Y += doc.heightOfString(bullet + term, { width: CONTENT_WIDTH - 15 }) + 4;

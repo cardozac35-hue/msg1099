@@ -20,6 +20,10 @@ import {
   FileCheck,
   Truck,
   Sparkles,
+  FlaskConical,
+  CheckCheck,
+  FolderSync,
+  Shield,
 } from "lucide-react";
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
 import { DocumentPreviewModal } from "@/components/documents/document-preview-modal";
@@ -64,18 +68,25 @@ export default function DocumentDashboardPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Material Certification & Quality Hub
+              MSG Oilfield • Material Certification & Quality Hub
             </h1>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
-              LIVE ERP
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+              DUBAI JAFZA
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Enterprise management of EN 10204 3.1 & 3.2 certificates, inspection charts, and dispatch readiness dossiers.
+            Material Solutions Grid — Sourcing: Reliable & Systematic. Management of EN 10204 3.1 & 3.2 certificates, metallurgy analysis, and dispatch readiness dossiers.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
+          <Link
+            href="/dashboard/documents/bulk-upload"
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+          >
+            <FolderSync className="w-4 h-4" />
+            <span>Bulk Heat Matcher</span>
+          </Link>
           <Link
             href="/dashboard/documents/upload"
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-2 transition"
@@ -83,13 +94,73 @@ export default function DocumentDashboardPage() {
             <UploadCloud className="w-4 h-4" />
             <span>Upload Certificate</span>
           </Link>
-          <Link
-            href="/dashboard/documents/traceability"
-            className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition"
-          >
-            Traceability Engine
-          </Link>
         </div>
+      </div>
+
+      {/* MSG Specialized Engineering Suite Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Link
+          href="/dashboard/documents/mtc-analyzer"
+          className="p-4 rounded-xl bg-gradient-to-br from-slate-900 to-amber-950 text-white border border-slate-800 shadow-sm hover:scale-[1.01] transition flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400">
+              <FlaskConical className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider block">
+                METALLURGY ENGINE
+              </span>
+              <h3 className="text-xs font-bold text-white group-hover:text-amber-300 transition">
+                MTC Chemistry & Mech Analyzer
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">CE(IIW), Pcm, NACE MR0175, Charpy -46°C</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
+
+        <Link
+          href="/dashboard/documents/project-specs"
+          className="p-4 rounded-xl bg-gradient-to-br from-slate-900 to-blue-950 text-white border border-slate-800 shadow-sm hover:scale-[1.01] transition flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+              <CheckCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider block">
+                GCC CLIENT MATRIX
+              </span>
+              <h3 className="text-xs font-bold text-white group-hover:text-blue-300 transition">
+                Aramco & ADNOC Project Specs
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">01-SAMSS-035, DGS-1300, PDO SP-1173</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
+
+        <Link
+          href="/dashboard/documents/bulk-upload"
+          className="p-4 rounded-xl bg-gradient-to-br from-slate-900 to-emerald-950 text-white border border-slate-800 shadow-sm hover:scale-[1.01] transition flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+              <FolderSync className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+                AUTOMATED PARSER
+              </span>
+              <h3 className="text-xs font-bold text-white group-hover:text-emerald-300 transition">
+                Bulk Cert & Heat Matcher
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Multi-file OCR detection & PO assignment</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-1 transition-transform" />
+        </Link>
       </div>
 
       {/* KPI Summary Cards Grid */}

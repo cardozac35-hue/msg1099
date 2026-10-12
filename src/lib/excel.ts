@@ -34,8 +34,8 @@ export async function generateMasterSheetExcel(
   role: "admin" | "salesperson" | "quality_reviewer" | "management" | string
 ): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Oil & Gas Sales Hub";
-  workbook.lastModifiedBy = "Oil & Gas Sales Hub System";
+  workbook.creator = "MSG Oilfield Equipment Trading LLC";
+  workbook.lastModifiedBy = "MSG Oilfield System (Dubai)";
   workbook.created = new Date();
 
   const worksheet = workbook.addWorksheet("Master Register", {

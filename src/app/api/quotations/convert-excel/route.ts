@@ -16,12 +16,29 @@ export async function POST(req: NextRequest) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
-      let items = [];
-      if (file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
-        const text = buffer.toString("utf-8");
-        items = parsePastedExcelText(text);
-      } else {
-        items = await parseExcelBuffer(buffer);
+      let items: any[] = [];
+      try {
+        if (file.name.endsWith(".csv") || file.name.endsWith(".txt")) {
+          const text = buffer.toString("utf-8");
+          items = parsePastedExcelText(text);
+        } else {
+          items = await parseExcelBuffer(buffer);
+        }
+      } catch (parseErr: any) {
+        console.warn("Buffer parse failed, attempting text fallback:", parseErr.message);
+        try {
+          const text = buffer.toString("utf-8");
+          items = parsePastedExcelText(text);
+        } catch {
+          // Ignore
+        }
+      }
+
+      if (!items || items.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: `Could not parse items from "${file.name}". Please ensure it contains product descriptions and quantities, or copy and paste the rows directly into the text box.`,
+        }, { status: 400 });
       }
 
       return NextResponse.json({

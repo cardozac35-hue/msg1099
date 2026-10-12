@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 
 export interface ParsedQuoteItem {
   sNo: number;
@@ -47,31 +48,105 @@ export function parsePastedExcelText(rawText: string): ParsedQuoteItem[] {
 }
 
 /**
- * Parses an Excel file Buffer (.xlsx) using ExcelJS
+ * Parses an Excel file Buffer (.xlsx, .xls, .csv, HTML table)
  */
 export async function parseExcelBuffer(buffer: Buffer): Promise<ParsedQuoteItem[]> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as any);
+  // Method 1: SheetJS (XLSX) - Natively reads .xlsx, .xls (BIFF8 binary), CSV, TSV, XML, HTML
+  try {
+    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false });
+    if (workbook.SheetNames && workbook.SheetNames.length > 0) {
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      if (worksheet) {
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        const cleanRows: string[][] = rawRows
+          .map((row) => (Array.isArray(row) ? row : []).map((c) => String(c ?? "").trim()))
+          .filter((row) => row.some((c) => c.length > 0));
 
-  const worksheet = workbook.worksheets[0];
-  if (!worksheet) return [];
-
-  const rows: string[][] = [];
-  worksheet.eachRow({ includeEmpty: false }, (row) => {
-    const rowValues = row.values as any[];
-    // row.values is 1-indexed in ExcelJS
-    const cleanCells = (Array.isArray(rowValues) ? rowValues.slice(1) : []).map((val) => {
-      if (val === null || val === undefined) return "";
-      if (typeof val === "object" && val.text) return String(val.text).trim();
-      if (typeof val === "object" && val.result !== undefined) return String(val.result).trim();
-      return String(val).trim();
-    });
-    if (cleanCells.some((c) => c.length > 0)) {
-      rows.push(cleanCells);
+        if (cleanRows.length > 0) {
+          const parsed = parseTableRows(cleanRows);
+          if (parsed.length > 0) return parsed;
+        }
+      }
     }
-  });
+  } catch (err) {
+    // Continue to fallback
+  }
 
-  return parseTableRows(rows);
+  // Method 2: ExcelJS - specifically for standard OpenXML .xlsx (valid PK zip archive)
+  try {
+    const isZip = buffer.length >= 4 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+    if (isZip) {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const worksheet = workbook.worksheets[0];
+      if (worksheet) {
+        const rows: string[][] = [];
+        worksheet.eachRow({ includeEmpty: false }, (row) => {
+          const rowValues = row.values as any[];
+          const cleanCells = (Array.isArray(rowValues) ? rowValues.slice(1) : []).map((val) => {
+            if (val === null || val === undefined) return "";
+            if (typeof val === "object" && val.text) return String(val.text).trim();
+            if (typeof val === "object" && val.result !== undefined) return String(val.result).trim();
+            return String(val).trim();
+          });
+          if (cleanCells.some((c) => c.length > 0)) {
+            rows.push(cleanCells);
+          }
+        });
+        if (rows.length > 0) {
+          const parsed = parseTableRows(rows);
+          if (parsed.length > 0) return parsed;
+        }
+      }
+    }
+  } catch (err) {
+    // Continue to text fallback
+  }
+
+  // Method 3: Fallback for HTML tables (common in ERP exports renamed to .xls or .xlsx)
+  try {
+    const text = buffer.toString("utf-8");
+    if (text.includes("<table") || text.includes("<tr")) {
+      const htmlRows = parseHtmlTable(text);
+      if (htmlRows.length > 0) {
+        const parsed = parseTableRows(htmlRows);
+        if (parsed.length > 0) return parsed;
+      }
+    }
+
+    // Method 4: Fallback for Plain text / CSV
+    const textItems = parsePastedExcelText(text);
+    if (textItems.length > 0) return textItems;
+  } catch (err) {
+    // Fall through
+  }
+
+  return [];
+}
+
+/**
+ * Helper to parse HTML tables (e.g. ERP reports saved as .xls)
+ */
+function parseHtmlTable(html: string): string[][] {
+  const rows: string[][] = [];
+  const trMatches = html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  for (const tr of trMatches) {
+    const cellMatches = tr.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi) || [];
+    const cells = cellMatches.map((cell) => {
+      return cell
+        .replace(/<[^>]+>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+    });
+    if (cells.some((c) => c.length > 0)) {
+      rows.push(cells);
+    }
+  }
+  return rows;
 }
 
 /**
